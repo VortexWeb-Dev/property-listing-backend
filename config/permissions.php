@@ -12,6 +12,10 @@ return [
         'property.edit',
         'property.delete',
         'settings.manage',
+        'company.view',
+        'company.create',
+        'company.edit',
+        'company.delete',
     ],
 
     'admin' => [
@@ -28,6 +32,7 @@ return [
         'property.view',
         'property.create',
         'property.edit',
+        'property.delete',
     ],
 
 ];

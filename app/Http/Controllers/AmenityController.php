@@ -8,8 +8,6 @@ use Illuminate\Validation\Rule;
 
 class AmenityController extends Controller
 {
-
-
     public function index()
     {
         return response()->json(Amenity::all());
@@ -31,7 +29,8 @@ class AmenityController extends Controller
         $amenity = Amenity::find($id);
 
 
-        if (!$amenity) {
+        if (!$amenity) 
+        {
             return response()->json(['message' => 'Amenity not found'], 404);
         }
 
@@ -44,7 +43,8 @@ class AmenityController extends Controller
     {
         $amenity = Amenity::find($amenity_id);
 
-        if (!$amenity) {
+        if (!$amenity) 
+        {
             return response()->json(['message' => 'Amenity not found with this ID'], 404);
         }
 
@@ -70,7 +70,8 @@ class AmenityController extends Controller
     {
         $amenity = Amenity::find($amenity_id);
 
-        if (!$amenity) {
+        if (!$amenity) 
+        {
             return response()->json(['message' => 'Amenity not found'], 404);
         }
 

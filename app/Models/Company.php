@@ -31,4 +31,10 @@ class Company extends Model
     {
         return User::whereIn('id', $this->admins ?? [])->where('role', 'admin')->get();
     }
+
+    public function agents()
+   {
+    return $this->hasMany(User::class, 'company_id')->where('role', 'agent');
+   }
+
 }

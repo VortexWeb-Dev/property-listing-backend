@@ -10,4 +10,10 @@ class Amenity extends Model
     use HasFactory;
 
     protected $fillable = ['amenity_name', 'amenity_code'];
+
+    public function listings()
+    {
+    return $this->belongsToMany(Listing::class, 'amenity_listing');
+    }
+
 }

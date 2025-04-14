@@ -5,17 +5,31 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use App\Models\Company;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 
 class CompanyController extends Controller
 {
    
     public function index()
     {
+        // below code insures admin and agent won't be able to see all other companies
+        if (Gate::denies('company.view')) 
+        {
+            return response()->json(['message' => 'You are not allowed to perform this action!'], 403);
+        }
         return Company::with('users')->get();
     }
 
     public function store(Request $request)
     {
+       // below code insures admin and agent won't be able to create a company
+       if (Gate::denies('company.create')) 
+        {
+            return response()->json(['message' => 'You are not allowed to perform this action!'], 403);
+        }
+   
+        
         $validated = $request->validate([
             'name' => 'required|string',
             'email' => 'required|email|unique:companies,email',
@@ -37,7 +51,8 @@ class CompanyController extends Controller
         // If any provided admin ID is not a valid admin, throw error
         $invalidAdminIds = array_diff($requestedAdminIds, $validAdminIds);
     
-        if (!empty($invalidAdminIds)) {
+        if (!empty($invalidAdminIds)) 
+        {
             return response()->json([
                 'message' => 'Selected admin(s) are not valid'
               
@@ -56,7 +71,7 @@ class CompanyController extends Controller
     public function update(Request $request, Company $company)
     {
    
-    $validated = $request->validate([
+        $validated = $request->validate([
         'name' => 'sometimes|string',
         'email' => 'sometimes|email|unique:companies,email,' . $company->id,
         'phone' => 'nullable|string',
@@ -80,7 +95,8 @@ class CompanyController extends Controller
         ->toArray();
       
     //  Validation check: if some provided IDs are not admins, return error
-    if (count($add) !== count($validated['admins_to_add'] ?? [])) {
+    if (count($add) !== count($validated['admins_to_add'] ?? [])) 
+    {
         return response()->json([
             'message' => 'One or more users to add are not admins.'
         ], 422);
@@ -109,9 +125,11 @@ class CompanyController extends Controller
     
     }
     
-    public function show($company_id){
+    public function show($company_id)
+    {
         $company=Company::find($company_id);
-        if(!$company){
+        if(!$company)
+        {
             return response()->json("No Company Found",404);
         }
         
