@@ -3,12 +3,10 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('listings', function (Blueprint $table) {
@@ -40,7 +38,7 @@ return new class extends Migration
             $table->date('rera_expiration_date')->nullable();
             $table->date('contract_expiry_date')->nullable();
             $table->string('rental_period')->nullable();
-            $table->enum('rprice_price', ['0','1','2'])->nullable(); // hide/show
+            $table->enum('rprice_price', ['0','1','2'])->nullable();
             $table->string('payment_method')->nullable();
             $table->string('financial_status')->nullable();
             $table->string('sale_type_1')->nullable();
@@ -66,21 +64,30 @@ return new class extends Migration
             $table->string('brochure')->nullable();
             $table->string('video_url')->nullable();
             $table->string('360_view_url')->nullable();
-            $table->string('photos_urls')->nullable(); // optional if not using JSON
-            $table->enum('status', ['0','1','2'])->default('1'); // draft, live, pocket
+            $table->string('photos_urls')->nullable();
+            
+            // Final status column (renamed and values mapped)
+            $table->string('status')->default('unpublished'); // merged with status update
             $table->enum('property_finder', ['0','1'])->default('0');
             $table->enum('dubizzle', ['0','1'])->default('0');
             $table->enum('website', ['0','1'])->default('0');
             $table->enum('watermark', ['0','1'])->default('0');
-            $table->foreignId('landlord_id')->nullable()->constrained('users')->onDelete('set null');
+
+            // New platform flags
+            $table->boolean('pf_enable')->default(false);
+            $table->boolean('bayut_enable')->default(false);
+            $table->boolean('dubizzle_enable')->default(false);
+            $table->boolean('website_enable')->default(false);
+
+            // Foreign keys
+            $table->foreignId('company_id')->nullable()->constrained('companies')->onDelete('set null');
+            $table->foreignId('agent_id')->nullable()->constrained('users')->onDelete('set null');
+            $table->foreignId('owner_id')->nullable()->constrained('users')->onDelete('set null');
+            
             $table->timestamps();
         });
-        
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('listings');

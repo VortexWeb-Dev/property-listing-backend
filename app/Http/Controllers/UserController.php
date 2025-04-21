@@ -30,69 +30,81 @@ class UserController extends Controller
     }
 
     public function store(Request $request)
-    {
-        if (Gate::denies("user.create")) {
-            abort(403, "YOU ARE NOT ALLOWED TO CREATE USERS.");
-        }
-
-        $authUser = auth()->user(); // get the logged-in user
-
-        // Adjust validation based on who is creating the user
-        $rules = [
-            "name" => "required|string",
-            "email" => "required|email|unique:users,email",
-            "password" => "required|string|min:6",
-            "phone" => "nullable|string",
-            "rera_number" => "nullable|string",
-            "profile_url" => "nullable|url",
-        ];
-
-        if ($authUser->role === "admin") {
-            // Admins can only assign the role 'agent'
-            $rules["role"] = "required|in:agent";
-        } else {
-            // Super admin or others can assign any role and company
-            $rules["role"] = "required|in:super_admin,admin,agent";
-            $rules["company_id"] = "nullable|exists:companies,id";
-        }
-
-        $validated = $request->validate($rules);
-
-        // If admin, force company_id from the logged-in user
-        if ($authUser->role === "admin") {
-            if (is_null($authUser->company_id)) {
-                return response()->json(
-                    [
-                        "message" => "You are not assigned to any company.",
-                    ],
-                    403
-                );
-            }
-
-            // force the same company_id for the new agent
-            $validated["company_id"] = $authUser->company_id;
-        }
-
-        $user = User::create($validated);
-
-        // If new created role is admin (and allowed), update company admins column
-        if (
-            $validated["role"] === "admin" &&
-            !empty($validated["company_id"])
-        ) {
-            $company = Company::find($validated["company_id"]);
-            $currentAdmins = $company->admins ?? [];
-            $updatedAdmins = collect($currentAdmins)
-                ->push($user->id)
-                ->unique()
-                ->values()
-                ->toArray();
-            $company->admins = $updatedAdmins;
-            $company->save();
-        }
-
-        return response()->json($user, 201);
+{
+    if (Gate::denies("user.create")) {
+        abort(403, "YOU ARE NOT ALLOWED TO CREATE USERS.");
     }
+
+    $authUser = auth()->user(); // get the logged-in user
+
+    // Basic rules for all
+    $rules = [
+        "name" => "required|string",
+        "email" => "required|email|unique:users,email",
+        "password" => "required|string|min:6",
+        "phone" => "nullable|string",
+        "profile_url" => "nullable|url",
+    ];
+
+    if ($authUser->role === "admin") {
+        // Admins can only assign 'agent' or 'owner'
+        $rules["role"] = "required|in:agent,owner";
+    } else {
+        // Super admin can assign any role
+        $rules["role"] = "required|in:super_admin,admin,agent,owner";
+        $rules["company_id"] = "nullable|exists:companies,id";
+    }
+
+    // Temporarily validate 'role' only to decide about 'rera_number'
+    $tempValidation = $request->validate([
+        'role' => $rules['role']
+    ]);
+
+    // If role is agent, rera_number is required
+    if ($request->role === 'agent') {
+        $rules['rera_number'] = 'required|string';
+    } else {
+        $rules['rera_number'] = 'nullable|string';
+    }
+
+    // Now perform full validation
+    $validated = $request->validate($rules);
+
+    // Force company_id if user is admin
+    if ($authUser->role === "admin") {
+        if (is_null($authUser->company_id)) {
+            return response()->json(
+                [
+                    "message" => "You are not assigned to any company.",
+                ],
+                403
+            );
+        }
+
+        $validated["company_id"] = $authUser->company_id;
+    }
+
+    $user = User::create($validated);
+
+    // If role is admin, add to company admins
+    if (
+        $validated["role"] === "admin" &&
+        !empty($validated["company_id"])
+    ) {
+        $company = Company::find($validated["company_id"]);
+        $currentAdmins = $company->admins ?? [];
+        $updatedAdmins = collect($currentAdmins)
+            ->push($user->id)
+            ->unique()
+            ->values()
+            ->toArray();
+        $company->admins = $updatedAdmins;
+        $company->save();
+    }
+
+    return response()->json($user, 201);
+}
+
 
     public function show(User $user)
     {
@@ -116,143 +128,113 @@ class UserController extends Controller
     }
 
     public function update(Request $request, User $user)
-    {
-        //only admin and super_admin are allowed to perform this action
+{
+    // Only admin and super_admin are allowed
+    if (Gate::denies("user.edit")) {
+        abort(403, "YOU ARE NOT ALLOWED TO EDIT USERS.");
+    }
 
-        if (Gate::denies("user.edit")) {
-            abort(403, "YOU ARE NOT ALLOWED TO EDIT USERS.");
+    $currentUser = Auth::user();
+
+    $cleanRole = strtolower(trim(preg_replace("/\s+/", "", $user->role)));
+
+    if ($currentUser->role === "admin" && !in_array($cleanRole, ["agent", "owner"])) {
+        return response()->json(["message" => "ADMINS CAN ONLY EDIT AGENTS OR OWNERS."], 403);
+    }
+
+    if ($currentUser->role === "admin" && $currentUser->company_id != $user->company_id) {
+        return response()->json(["message" => "U CAN NOT UPDATE THIS USER."], 403);
+    }
+
+    $validated = $request->validate([
+        "name" => "sometimes|string",
+        "email" => "sometimes|email|unique:users,email," . $user->id,
+        "password" => "nullable|string|min:6",
+        "company_id" => "nullable|integer|min:0",
+        "role" => "in:super_admin,admin,agent",
+        "phone" => "nullable|string",
+        "rera_number" => "nullable|string",
+        "profile_url" => "nullable|url",
+    ]);
+
+    if ($currentUser->role === "admin" && isset($validated["role"])) {
+        $attemptedRole = strtolower($validated["role"]);
+        if (in_array($attemptedRole, ["admin", "super_admin"])) {
+            return response()->json([
+                "message" => "You are not allowed to promote agents to admin or super admin.",
+            ], 403);
         }
+    }
 
-        // Check role-based update permission
-        $currentUser = Auth::user();
+    $newRole = $validated["role"] ?? $user->role;
+    $wasAgent = strtolower($user->role) === "agent";
+    $becomesAgent = strtolower($newRole) === "agent";
 
-        $cleanRole = strtolower(trim(preg_replace("/\s+/", "", $user->role)));
+    // Check for RERA number requirement
+    if ($becomesAgent && empty($request->rera_number)) {
+        return response()->json([
+            "message" => "The RERA number is required for users with the agent role."
+        ], 422);
+    }
 
-        if (
-            $currentUser->role === "admin" &&
-            !in_array($cleanRole, ["agent"])
-        ) {
-            //to prevent admin from editing other admins/superadmins data
+    if (isset($validated["password"])) {
+        $validated["password"] = bcrypt($validated["password"]);
+    }
 
-            return response()->json(
-                ["message" => "ADMINS CAN ONLY EDIT AGENTS OR USERS."],
-                403
-            );
+    $originalRole = $user->role;
+    $oldCompanyId = $user->company_id;
+    $newCompanyId = array_key_exists("company_id", $validated)
+        ? ($validated["company_id"] !== 0 ? $validated["company_id"] : null)
+        : $user->company_id;
+
+    // Remove admin from old company admin list if demoted
+    if ($originalRole === "admin" && $newRole !== "admin" && $oldCompanyId) {
+        $oldCompany = Company::find($oldCompanyId);
+        if ($oldCompany) {
+            $oldCompany->admins = collect($oldCompany->admins ?? [])
+                ->reject(fn($id) => $id == $user->id)
+                ->values()
+                ->toArray();
+            $oldCompany->save();
         }
+    }
 
-        $currentUser_companyId = $currentUser->company_id;
-        $users_companyId = $user->company_id;
-
-        if ($currentUser->role === "admin") {
-            // admin can't update other company user data
-            if ($currentUser_companyId != $users_companyId) {
-                return response()->json(
-                    ["message" => "U CAN NOT UPDATE THIS USER."],
-                    403
-                );
-            }
-        }
-
-        $validated = $request->validate([
-            "name" => "sometimes|string",
-            "email" => "sometimes|email|unique:users,email," . $user->id,
-            "password" => "nullable|string|min:6",
-            "company_id" => "nullable|integer|min:0",
-            "role" => "in:super_admin,admin,agent",
-            "phone" => "nullable|string",
-            "rera_number" => "nullable|string",
-            "profile_url" => "nullable|url",
-        ]);
-
-        if ($currentUser->role === "admin" && isset($validated["role"])) {
-            $attemptedRole = strtolower($validated["role"]);
-
-            if (in_array($attemptedRole, ["admin", "super_admin"])) {
-                return response()->json(
-                    [
-                        "message" =>
-                            "You are not allowed to promote agents to admin or super admin.",
-                    ],
-                    403
-                );
-            }
-        }
-
-        if (isset($validated["password"])) {
-            $validated["password"] = bcrypt($validated["password"]);
-        }
-
-        // Track original role and company_id before updating,check if non zero value is passed to update company_id if not store old company_id.
-        $originalRole = $user->role;
-        $oldCompanyId = $user->company_id;
-        $newCompanyId = array_key_exists("company_id", $validated)
-            ? ($validated["company_id"] !== 0
-                ? $validated["company_id"]
-                : null)
-            : $user->company_id; // fallback to old if not passed
-
-        $newRole = $validated["role"] ?? $originalRole;
-
-        // When an admin user is demoted (for example, changed to agent or user), they should no longer be listed in the companies admins field. This code ensures that.
-        if (
-            $originalRole === "admin" &&
-            $newRole !== "admin" &&
-            $oldCompanyId
-        ) {
+    // Handle admin assignment to company
+    if ($newRole === "admin") {
+        if ($oldCompanyId && $oldCompanyId != $newCompanyId) {
             $oldCompany = Company::find($oldCompanyId);
             if ($oldCompany) {
-                $oldAdmins = collect($oldCompany->admins ?? [])
+                $oldCompany->admins = collect($oldCompany->admins ?? [])
                     ->reject(fn($id) => $id == $user->id)
                     ->values()
                     ->toArray();
-
-                $oldCompany->admins = $oldAdmins;
                 $oldCompany->save();
             }
         }
 
-        // Handle admin assigning to company
-        if ($newRole === "admin") {
-            // If company_id changed, remove from old
-            if ($oldCompanyId && $oldCompanyId != $newCompanyId) {
-                $oldCompany = Company::find($oldCompanyId);
-                if ($oldCompany) {
-                    $oldAdmins = collect($oldCompany->admins ?? [])
-                        ->reject(fn($id) => $id == $user->id)
-                        ->values()
-                        ->toArray();
-
-                    $oldCompany->admins = $oldAdmins;
-                    $oldCompany->save();
-                }
-            }
-
-            // if role has changed to admin and it has comapnay_id either previously or in this request add his user id in companies admins column.
-            if ($newCompanyId) {
-                $newCompany = Company::find($newCompanyId);
-                if ($newCompany) {
-                    $currentAdmins = $newCompany->admins ?? [];
-                    $updatedAdmins = collect($currentAdmins)
-                        ->push($user->id)
-                        ->unique()
-                        ->values()
-                        ->toArray();
-
-                    $newCompany->admins = $updatedAdmins;
-                    $newCompany->save();
-                }
+        if ($newCompanyId) {
+            $newCompany = Company::find($newCompanyId);
+            if ($newCompany) {
+                $newCompany->admins = collect($newCompany->admins ?? [])
+                    ->push($user->id)
+                    ->unique()
+                    ->values()
+                    ->toArray();
+                $newCompany->save();
             }
         }
-
-        // Set company_id = null if 0 was passed
-        if (isset($validated["company_id"]) && $validated["company_id"] == 0) {
-            $validated["company_id"] = null;
-        }
-
-        $user->update($validated);
-
-        return response()->json($user);
     }
+
+    // Set company_id = null if 0 was passed
+    if (isset($validated["company_id"]) && $validated["company_id"] == 0) {
+        $validated["company_id"] = null;
+    }
+
+    $user->update($validated);
+
+    return response()->json($user);
+}
+
 
     public function destroy(User $user)
     {

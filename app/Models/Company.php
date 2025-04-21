@@ -37,4 +37,10 @@ class Company extends Model
     return $this->hasMany(User::class, 'company_id')->where('role', 'agent');
    }
 
+   public function owners()
+{
+    return $this->hasMany(User::class)->where('role', 'owner');
+}
+
+
 }
