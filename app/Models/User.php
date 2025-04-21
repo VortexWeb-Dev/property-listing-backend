@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Models;
+use App\Models\Company;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -23,6 +24,10 @@ class User extends Authenticatable
         'email',
         'password',
         'role',
+        'company_id',
+        'rera_number',
+        'profile_url',
+        'phone',
     ];
 
     /**
@@ -47,4 +52,10 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+    public function company()
+    {
+        return $this->belongsTo(Company::class);
+    }
+    
+    
 }

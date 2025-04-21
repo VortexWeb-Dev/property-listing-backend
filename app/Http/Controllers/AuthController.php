@@ -10,13 +10,17 @@ class AuthController extends Controller
 {
     public function register(Request $request)
     {
+        
+       
         $fields = $request->validate([
             'name' => 'required|max:255',
             'email' => 'required|email|unique:users',
             'password' => 'required|min:6|confirmed',
-            'role' => 'in:super_admin,admin,agent,developer,user',
+            'role' => 'in:super_admin,admin,agent',
         ]);
 
+        // confirm password field=password_confirmation
+        
         $user = User::create($fields);
 
         $token = $user->createToken($request->name)->plainTextToken;
