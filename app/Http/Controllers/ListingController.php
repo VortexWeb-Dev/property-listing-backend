@@ -21,34 +21,54 @@ class ListingController extends Controller
         if (Gate::denies("property.create")) {
             abort(403, "YOU ARE NOT ALLOWED TO EDIT USERS.");
         }
-
-        $currentLoggedInUser = Auth::user();
-        $currentLoggedInUser_role = $currentLoggedInUser->role;
-        $currentLoggedInUser_id = $currentLoggedInUser->id;
-        $currentLoggedInUser_companyId = $currentLoggedInUser->company_id;
-
-        if ($currentLoggedInUser_companyId == null) {
-            return response()->json(
-                [
-                    "error" =>
-                        "You are not assigned to any company or do not have permission.",
-                ],
-                403
-            );
+    
+        $user = Auth::user();
+        $role = $user->role;
+        $userId = $user->id;
+        $companyId = $user->company_id;
+    
+        // Super Admin: see all listings and all owners
+        if ($role === 'super_admin') {
+            return response()->json([
+                'listings' => Listing::with(['photos', 'amenities'])->get(),
+                'owners_for_all_companies' => User::where('role', 'owner')->get(),
+            ]);
         }
-
-        if (
-            ($currentLoggedInUser_role === "admin" ||
-                $currentLoggedInUser_role === "agent") &&
-            $currentLoggedInUser_companyId !== null
-        ) {
-            return Listing::with(["photos", "amenities"])
-                ->where("company_id", $currentLoggedInUser_companyId)
-                ->get();
+    
+        // Non-super_admin must be assigned to a company
+        if ($companyId === null) {
+            return response()->json([
+                "error" => "You are not assigned to any company or do not have permission.",
+            ], 403);
         }
-
-        return Listing::with(["photos", "amenities"])->get();
+    
+        // Owners for this company
+        $owners = User::where('role', 'owner')
+            ->where('company_id', $companyId)
+            ->get();
+    
+        // Listings within the company
+        $listingsQuery = Listing::with(['photos', 'amenities'])
+            ->where('company_id', $companyId);
+    
+        // Agent: can only view their own listings
+        if ($role === 'agent') {
+            $listingsQuery->where('agent_id', $userId);
+        }
+    
+        if($role=='owner'){
+            $listingsQuery->where('owner_id', $userId); 
+        }
+        $listings = $listingsQuery->get();
+    
+        return response()->json([
+            'listings' => $listings,
+            'owners_for_this_company' => $owners,
+        ]);
     }
+    
+
+
 
     public function store(Request $request)
     {
@@ -56,16 +76,34 @@ class ListingController extends Controller
             abort(403, "YOU ARE NOT ALLOWED TO CREATE LISTINGS.");
         }
         $input = $request->all();
-        // check if current user is agent then insert his agent_id and company_id dynamicaaly
+       
 
         $currentLoggedInUser = Auth::user();
         $currentLoggedInUser_role = $currentLoggedInUser->role;
         $currentLoggedInUser_id = $currentLoggedInUser->id;
         $currentLoggedInUser_companyId = $currentLoggedInUser->company_id;
 
+        // when logged in user is admin
+        if ($currentLoggedInUser_role === "admin") {
+            if ($currentLoggedInUser_companyId != null) {
+                $input["company_id"] = $currentLoggedInUser_companyId;
+            } else {
+                return response()->json("U Are Not Assigned With Any Company");
+            }
+        }
+        // When logged in user is agent
         if ($currentLoggedInUser_role === "agent") {
             if ($currentLoggedInUser_companyId != null) {
                 $input["agent_id"] = $currentLoggedInUser_id;
+                $input["company_id"] = $currentLoggedInUser_companyId;
+            } else {
+                return response()->json("U Are Not Assigned With Any Company");
+            }
+        }
+        // When logged in user is owner
+        if ($currentLoggedInUser_role === "owner") {
+            if ($currentLoggedInUser_companyId != null) {
+                $input["owner_id"] = $currentLoggedInUser_id;
                 $input["company_id"] = $currentLoggedInUser_companyId;
             } else {
                 return response()->json("U Are Not Assigned With Any Company");
@@ -378,4 +416,33 @@ class ListingController extends Controller
             "agents" => $agents,
         ]);
     }
+
+    public function listOwners()
+    {
+        $user = Auth::user();
+    
+        if ($user->role === "super_admin") {
+            $owners = User::with("company")
+                ->where("role", "owner")
+                ->get();
+    
+            return response()->json(["owners" => $owners]);
+        }
+    
+        if ($user->role === "admin") {
+            $owners = User::where("role", "owner")
+                ->where("company_id", $user->company_id)
+                ->get();
+    
+            return response()->json([
+                "company_id" => $user->company_id,
+                "owners" => $owners,
+            ]);
+        }
+    
+        return response()->json(["message" => "Unauthorized"], 403);
+    }
+    
+
+
 }

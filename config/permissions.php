@@ -35,4 +35,10 @@ return [
         'property.delete',
     ],
 
+    'owner' => [
+        'property.view',
+        'property.create',
+        'property.edit',
+        'property.delete',
+    ],
 ];

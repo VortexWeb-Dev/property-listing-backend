@@ -9,6 +9,8 @@ use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\ListingController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\DeveloperController;
+use App\Http\Controllers\ListingActionController;
+use App\Http\Controllers\XmlController;
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
@@ -29,5 +31,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/listing/agents', [ListingController::class, 'agentsList']); // for admin
     Route::get('/unassociatedadmins', [UserController::class, 'unassociatedadmins']);
     Route::get('/associatedadmins', [UserController::class, 'associatedadmins']);
+    Route::post('/listing/action', [ListingActionController::class, 'handleAction']);
+    Route::post('/listing/agentbulktransfer', [ListingActionController::class, 'agentbulktransfer']);
+    Route::get('/xml/propertyfinder', [XmlController::class, 'propertyFinder']);
+    Route::get('/xml/bayut-dubizzle', [XmlController::class, 'bayutDubizzle']);
+    Route::get('/xml/website', [XmlController::class, 'website']);
+    Route::get('/listOwners', [ListingController::class, 'listOwners']);
     
+
 });

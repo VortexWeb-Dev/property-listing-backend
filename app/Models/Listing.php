@@ -82,4 +82,15 @@ class Listing extends Model
     {
     return $this->belongsToMany(Amenity::class, 'amenity_listing');
     }
+
+    public function agent()
+{
+    return $this->belongsTo(User::class, 'agent_id');
+}
+
+  public function owner()
+{
+    return $this->belongsTo(User::class, 'owner_id');
+}
+
 }
