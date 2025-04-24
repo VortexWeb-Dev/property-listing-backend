@@ -1,6 +1,8 @@
 <?php
 
+
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\XmlController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\PhotoController;
@@ -9,8 +11,8 @@ use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\ListingController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\DeveloperController;
+use App\Http\Controllers\PresignedController;
 use App\Http\Controllers\ListingActionController;
-use App\Http\Controllers\XmlController;
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
@@ -37,6 +39,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/xml/bayut-dubizzle', [XmlController::class, 'bayutDubizzle']);
     Route::get('/xml/website', [XmlController::class, 'website']);
     Route::get('/listOwners', [ListingController::class, 'listOwners']);
+    Route::get('/s3/presigned-url', [PresignedController::class, 'getPresignedUrl']);
     
-
 });
