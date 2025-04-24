@@ -16,7 +16,7 @@ class AuthController extends Controller
             'password' => 'required|min:6|confirmed',
             'role' => 'required|in:super_admin,admin,agent,owner',
             'rera_number' => 'required_if:role,agent|max:255', // only required if role is agent
-            'company_id'=>'required_if:role,owner',
+            // 'company_id'=>'required_if:role,owner',
         ]);
 
         

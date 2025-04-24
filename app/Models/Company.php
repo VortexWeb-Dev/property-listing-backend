@@ -22,6 +22,8 @@ class Company extends Model
         'admins' => 'array',
     ];
     
+    protected $appends = ['admin_users']; // this auto-includes admin_users in JSON
+    
     public function users()
     {
         return $this->hasMany(User::class);
@@ -42,5 +44,10 @@ class Company extends Model
     return $this->hasMany(User::class)->where('role', 'owner');
 }
 
+   public function getAdminUsersAttribute()
+{
+    $adminIds = $this->admins ?? []; // fallback in case it's null
+    return User::whereIn('id', $adminIds)->get();
+}
 
 }

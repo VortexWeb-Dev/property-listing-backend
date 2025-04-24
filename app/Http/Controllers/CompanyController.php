@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Gate;
 class CompanyController extends Controller
 {
    
-    public function index()
+      public function index()
     {
         // below code insures admin and agent won't be able to see all other companies
         if (Gate::denies('company.view')) 
@@ -21,7 +21,7 @@ class CompanyController extends Controller
         return Company::with('users')->get();
     }
 
-    public function store(Request $request)
+       public function store(Request $request)
     {
        // below code insures admin and agent won't be able to create a company
        if (Gate::denies('company.create')) 
@@ -68,7 +68,7 @@ class CompanyController extends Controller
         return response()->json($company, 201);
     }
 
-    public function update(Request $request, Company $company)
+       public function update(Request $request, Company $company)
     {
    
         $validated = $request->validate([
@@ -95,8 +95,7 @@ class CompanyController extends Controller
         ->toArray();
       
     //  Validation check: if some provided IDs are not admins, return error
-    if (count($add) !== count($validated['admins_to_add'] ?? [])) 
-    {
+    if (count($add) !== count($validated['admins_to_add'] ?? [])) {
         return response()->json([
             'message' => 'One or more users to add are not admins.'
         ], 422);
@@ -127,18 +126,22 @@ class CompanyController extends Controller
     
     public function show($company_id)
     {
-        $company=Company::find($company_id);
-        if(!$company)
-        {
-            return response()->json("No Company Found",404);
+        $company = Company::with('users')->find($company_id);
+    
+        if (!$company) {
+            return response()->json(['message' => 'No Company Found'], 404);
         }
-        
+    
+        // No need to manually assign admin_users now
         return response()->json($company);
     }
-    public function destroy(Company $company)
+    
+
+
+        public function destroy(Company $company)
     {
-    $company->delete();
-    return response()->json('Company Deleted', 204);
+        $company->delete();
+        return response()->json('Company Deleted', 204);
     }
 
 }

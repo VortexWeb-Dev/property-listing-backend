@@ -170,12 +170,12 @@ class UserController extends Controller
     $wasAgent = strtolower($user->role) === "agent";
     $becomesAgent = strtolower($newRole) === "agent";
 
+    $previousReraNumber=$user->rera_number;
     // Check for RERA number requirement
-    if ($becomesAgent && empty($request->rera_number)) {
-        return response()->json([
-            "message" => "The RERA number is required for users with the agent role."
-        ], 422);
+    if ($becomesAgent && empty($previousReraNumber) && empty($request->rera_number)) {
+        return response()->json(['message' => 'RERA number is required.'], 422);
     }
+    
 
     if (isset($validated["password"])) {
         $validated["password"] = bcrypt($validated["password"]);
