@@ -11,12 +11,15 @@ class PresignedController extends Controller
     {
         // Validate input
         $validator = Validator::make($request->all(), [
-            'fileName' => 'required|string',
-            'fileType' => 'required|string',
+            "fileName" => "required|string",
+            "fileType" => "required|string",
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['error' => 'Invalid input', 'details' => $validator->errors()], 422);
+            return response()->json(
+                ["error" => "Invalid input", "details" => $validator->errors()],
+                422
+            );
         }
 
         $fileName = $request->fileName;
@@ -24,35 +27,41 @@ class PresignedController extends Controller
 
         try {
             $s3Client = new S3Client([
-                'region' => env('AWS_DEFAULT_REGION'),
-                'version' => 'latest',
-                'credentials' => [
-                    'key' => env('AWS_ACCESS_KEY_ID'),
-                    'secret' => env('AWS_SECRET_ACCESS_KEY'),
+                "region" => env("AWS_DEFAULT_REGION"),
+                "version" => "latest",
+                "credentials" => [
+                    "key" => env("AWS_ACCESS_KEY_ID"),
+                    "secret" => env("AWS_SECRET_ACCESS_KEY"),
                 ],
             ]);
 
-            $bucket = env('AWS_BUCKET');
-            $key = 'uploads/' . $fileName; // folder + filename
+            $bucket = env("AWS_BUCKET");
+            $key = "uploads/" . $fileName; // folder + filename
 
-            $cmd = $s3Client->getCommand('PutObject', [
-                'Bucket' => $bucket,
-                'Key' => $key,
-                'ContentType' => $fileType,
+            $cmd = $s3Client->getCommand("PutObject", [
+                "Bucket" => $bucket,
+                "Key" => $key,
+                "ContentType" => $fileType,
             ]);
 
             // Generate the presigned URL - expires in 10 minutes
-            $request = $s3Client->createPresignedRequest($cmd, '+10 minutes');
+            $request = $s3Client->createPresignedRequest($cmd, "+10 minutes");
 
             $presignedUrl = (string) $request->getUri();
             $objectUrl = "https://{$bucket}.s3.amazonaws.com/{$key}";
 
             return response()->json([
-                'uploadUrl' => $presignedUrl,
-                'fileUrl' => $objectUrl
+                "uploadUrl" => $presignedUrl,
+                "fileUrl" => $objectUrl,
             ]);
         } catch (\Exception $e) {
-            return response()->json(['error' => 'Failed to generate URL', 'message' => $e->getMessage()], 500);
+            return response()->json(
+                [
+                    "error" => "Failed to generate URL",
+                    "message" => $e->getMessage(),
+                ],
+                500
+            );
         }
     }
 }
