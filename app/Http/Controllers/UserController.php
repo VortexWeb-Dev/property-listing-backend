@@ -42,7 +42,7 @@ class UserController extends Controller
         "name" => "required|string",
         "email" => "required|email|unique:users,email",
         "password" => "required|string|min:6",
-        "phone" => "nullable|string",
+        'phone' => 'required|regex:/^\+?[0-9]{1,4}?[0-9]{6,14}$/',
         "profile_url" => "nullable|url",
     ];
 
@@ -60,11 +60,12 @@ class UserController extends Controller
         'role' => $rules['role']
     ]);
 
+    // Ensure 'rera_number' is always unique
+    $rules['rera_number'] = 'nullable|string|unique:users,rera_number';
+
     // If role is agent, rera_number is required
     if ($request->role === 'agent') {
-        $rules['rera_number'] = 'required|string';
-    } else {
-        $rules['rera_number'] = 'nullable|string';
+        $rules['rera_number'] = 'required|string|unique:users,rera_number';
     }
 
     // Now perform full validation
@@ -138,25 +139,29 @@ class UserController extends Controller
 
     $cleanRole = strtolower(trim(preg_replace("/\s+/", "", $user->role)));
 
+    // Admin can only edit agents or owners
     if ($currentUser->role === "admin" && !in_array($cleanRole, ["agent", "owner"])) {
         return response()->json(["message" => "ADMINS CAN ONLY EDIT AGENTS OR OWNERS."], 403);
     }
 
+    // Admin can only edit users in the same company
     if ($currentUser->role === "admin" && $currentUser->company_id != $user->company_id) {
-        return response()->json(["message" => "U CAN NOT UPDATE THIS USER."], 403);
+        return response()->json(["message" => "YOU CANNOT UPDATE THIS USER."], 403);
     }
 
+    // Validation rules
     $validated = $request->validate([
         "name" => "sometimes|string",
         "email" => "sometimes|email|unique:users,email," . $user->id,
         "password" => "nullable|string|min:6",
         "company_id" => "nullable|integer|min:0",
-        "role" => "in:super_admin,admin,agent",
-        "phone" => "nullable|string",
-        "rera_number" => "nullable|string",
+        "role" => "in:super_admin,admin,agent,owner",
+        "phone" => "nullable|string|required_if:phone,null", // Make phone required if not already set
+        "rera_number" => "nullable|string|unique:users,rera_number," . $user->id, // Always ensure rera_number is unique
         "profile_url" => "nullable|url",
     ]);
 
+    // Admins cannot promote users to admin or super admin
     if ($currentUser->role === "admin" && isset($validated["role"])) {
         $attemptedRole = strtolower($validated["role"]);
         if (in_array($attemptedRole, ["admin", "super_admin"])) {
@@ -166,17 +171,19 @@ class UserController extends Controller
         }
     }
 
+    // Role transition checks: If the role changes to "agent", we need to check the RERA number
     $newRole = $validated["role"] ?? $user->role;
     $wasAgent = strtolower($user->role) === "agent";
     $becomesAgent = strtolower($newRole) === "agent";
 
-    $previousReraNumber=$user->rera_number;
-    // Check for RERA number requirement
+    $previousReraNumber = $user->rera_number;
+    
+    // Check if RERA number is required when becoming an agent
     if ($becomesAgent && empty($previousReraNumber) && empty($request->rera_number)) {
         return response()->json(['message' => 'RERA number is required.'], 422);
     }
-    
 
+    // Hash the password if it's provided
     if (isset($validated["password"])) {
         $validated["password"] = bcrypt($validated["password"]);
     }
@@ -230,10 +237,12 @@ class UserController extends Controller
         $validated["company_id"] = null;
     }
 
+    // Update user data
     $user->update($validated);
 
     return response()->json($user);
 }
+
 
 
     public function destroy(User $user)
