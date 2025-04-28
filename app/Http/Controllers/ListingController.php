@@ -18,64 +18,66 @@ use Aws\S3\S3Client;
 class ListingController extends Controller
 {
     public function index()
-    {
-        if (Gate::denies("property.create")) {
-            abort(403, "YOU ARE NOT ALLOWED TO EDIT USERS.");
-        }
+{
+    
+    if (Gate::denies("property.view")) {
+        abort(403, "YOU ARE NOT ALLOWED TO EDIT USERS.");
+    }
 
-        $user = Auth::user();
-        $role = $user->role;
-        $userId = $user->id;
-        $companyId = $user->company_id;
+    $user = Auth::user();
+    $role = $user->role;
+    $userId = $user->id;
+    $companyId = $user->company_id;
 
-        // Super Admin: see all listings and all owners
-        if ($role === "super_admin") {
-            return response()->json([
-                "listings" => Listing::with(["photos", "amenities"])->get(),
-                "owners_for_all_companies" => User::where(
-                    "role",
-                    "owner"
-                )->get(),
-            ]);
-        }
-
-        // Non-super_admin must be assigned to a company
-        if ($companyId === null) {
-            return response()->json(
-                [
-                    "error" =>
-                        "You are not assigned to any company or do not have permission.",
-                ],
-                403
-            );
-        }
-
-        // Owners for this company
-        $owners = User::where("role", "owner")
-            ->where("company_id", $companyId)
+    // Super Admin: see all listings and all owners
+    if ($role === "super_admin") {
+        // Fetch all listings with detailed photos, amenities, developer, location, and company information
+        $listings = Listing::with(["photos", "amenities", "developer", "location", "company", "agent","owner"])
             ->get();
-
-        // Listings within the company
-        $listingsQuery = Listing::with(["photos", "amenities"])->where(
-            "company_id",
-            $companyId
-        );
-
-        // Agent: can only view their own listings
-        if ($role === "agent") {
-            $listingsQuery->where("agent_id", $userId);
-        }
-
-        if ($role == "owner") {
-            $listingsQuery->where("owner_id", $userId);
-        }
-        $listings = $listingsQuery->get();
-
+        
         return response()->json([
             "listings" => $listings,
-            "owners_for_this_company" => $owners,
+            "owners_for_all_companies" => User::where("role", "owner")->get(),
         ]);
     }
+
+    // Non-super_admin must be assigned to a company
+    if ($companyId === null) {
+        return response()->json(
+            [
+                "error" => "You are not assigned to any company or do not have permission.",
+            ],
+            403
+        );
+    }
+
+    // Owners for this company
+    $owners = User::where("role", "owner")
+        ->where("company_id", $companyId)
+        ->get();
+
+    // Listings within the company
+    $listingsQuery = Listing::with(["photos", "amenities", "developer", "location", "company", "agent"])
+        ->where("company_id", $companyId);
+
+    // Agent: can only view their own listings
+    if ($role === "agent") {
+        $listingsQuery->where("agent_id", $userId);
+    }
+
+    // Owner: can only view their own listings
+    if ($role === "owner") {
+        $listingsQuery->where("owner_id", $userId);
+    }
+
+    $listings = $listingsQuery->get();
+
+    return response()->json([
+        "listings" => $listings,
+        "owners_for_this_company" => $owners,
+    ]);
+}
+
 
     public function store(Request $request)
     {
@@ -322,6 +324,73 @@ class ListingController extends Controller
             "listing" => $listing->load("photos"),
         ]);
     }
+
+        public function show($id)
+    {
+       
+        if (Gate::denies("property.view")) {
+            abort(403, "YOU ARE NOT ALLOWED TO VIEW THIS PROPERTY.");
+        }
+
+        $user = Auth::user();
+        $role = $user->role;
+        $userId = $user->id;
+        $companyId = $user->company_id;
+
+        // Check if the listing exists
+        $listing = Listing::with(["photos", "amenities", "developer", "location", "company", "agent", "owner"])
+            ->find($id);
+
+        // If listing not found, return 404 response
+        if (!$listing) {
+            return response()->json([
+                "error" => "Listing not found."
+            ], 404);
+        }
+
+        // Super Admin can view all listings and all owners
+        if ($role === "super_admin") {
+            return response()->json([
+                "listing" => $listing,
+                "owners_for_all_companies" => User::where("role", "owner")->get(),
+            ]);
+        }
+
+        // Non-super_admin must be assigned to a company
+        if ($companyId === null) {
+            return response()->json(
+                [
+                    "error" => "You are not assigned to any company or do not have permission.",
+                ],
+                403
+            );
+        }
+
+        // Owners for this company
+        $owners = User::where("role", "owner")
+            ->where("company_id", $companyId)
+            ->get();
+
+        // Agent: can only view their own listings
+        if ($role === "agent" && $listing->agent_id !== $userId) {
+            return response()->json([
+                "error" => "You do not have permission to view this listing."
+            ], 403);
+        }
+
+        // Owner: can only view their own listings
+        if ($role === "owner" && $listing->owner_id !== $userId) {
+            return response()->json([
+                "error" => "You do not have permission to view this listing."
+            ], 403);
+        }
+
+        return response()->json([
+            "listing" => $listing,
+            "owners_for_this_company" => $owners,
+        ]);
+    }
+
 
     public function destroy($id)
     {
