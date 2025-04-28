@@ -35,12 +35,7 @@ class PresignedController extends Controller
                 ],
             ]);
 
-            $bucket = $bucket = config('filesystems.disks.s3.bucket');
-            if (!$bucket) {
-                return response()->json([
-                    'error' => 'Bucket is missing',
-                ], 500);
-            }
+            $bucket =  config('filesystems.disks.s3.bucket');
             
             $key = "uploads/" . $fileName; // folder + filename
 
