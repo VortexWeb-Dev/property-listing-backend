@@ -36,7 +36,9 @@ class PresignedController extends Controller
             ]);
 
             $bucket =  config('filesystems.disks.s3.bucket');
-            
+            if (!$bucket) {
+                return response()->json(['error' => 'Bucket is not configured'], 400);
+            }
             $key = "uploads/" . $fileName; // folder + filename
 
             $cmd = $s3Client->getCommand("PutObject", [
