@@ -80,17 +80,31 @@ class Listing extends Model
 
     public function amenities()
     {
-    return $this->belongsToMany(Amenity::class, 'amenity_listing');
+        return $this->belongsToMany(Amenity::class, 'amenity_listing');
     }
 
     public function agent()
-{
-    return $this->belongsTo(User::class, 'agent_id');
-}
+    {
+        return $this->belongsTo(User::class, 'agent_id');
+    }
 
-  public function owner()
-{
-    return $this->belongsTo(User::class, 'owner_id');
-}
+    public function owner()
+    {
+        return $this->belongsTo(User::class, 'owner_id');
+    }
 
+    public function developer()
+    {
+        return $this->belongsTo(User::class, 'developer_id');
+    }
+
+    public function location()
+    {
+        return $this->belongsTo(Location::class, 'location_id');
+    }
+
+    public function company()
+    {
+        return $this->belongsTo(Company::class, 'company_id');
+    }
 }
