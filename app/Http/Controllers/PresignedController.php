@@ -35,7 +35,13 @@ class PresignedController extends Controller
                 ],
             ]);
 
-            $bucket = env("AWS_BUCKET");
+            $bucket = $bucket = config('filesystems.disks.s3.bucket');
+            if (!$bucket) {
+                return response()->json([
+                    'error' => 'Bucket is missing',
+                ], 500);
+            }
+            
             $key = "uploads/" . $fileName; // folder + filename
 
             $cmd = $s3Client->getCommand("PutObject", [
