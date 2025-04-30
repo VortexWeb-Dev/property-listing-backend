@@ -32,25 +32,25 @@ return new class extends Migration
             $table->foreignId('developer_id')->nullable()->constrained('developers')->onDelete('set null');
             $table->string('build_year')->nullable();
             $table->string('customer')->nullable();
-            $table->string('rera_permit')->nullable();
-            $table->string('rera_number')->nullable();
-            $table->date('rera_permit_issue_date')->nullable();
+            $table->string('rera_permit_number')->nullable();
+            $table->date('rera_issue_date')->nullable();
             $table->date('rera_expiration_date')->nullable();
             $table->date('contract_expiry_date')->nullable();
             $table->string('rental_period')->nullable();
-            $table->enum('rprice_price', ['0','1','2'])->nullable();
+            $table->integer('price')->nullable();
             $table->string('payment_method')->nullable();
             $table->string('financial_status')->nullable();
             $table->string('sale_type_1')->nullable();
-            $table->string('title(english)')->nullable();
-            $table->string('title(arabic)')->nullable();
-            $table->text('description(english)')->nullable();
-            $table->text('description(arabic)')->nullable();
+            $table->string('title_en')->nullable();
+            $table->string('title_ar')->nullable();
+            $table->text('desc_en')->nullable();
+            $table->text('desc_ar')->nullable();
             $table->string('geopoints')->nullable();
             $table->string('listing_owner')->nullable();
             $table->string('landlord_name')->nullable();
             $table->string('landlord_contact')->nullable();
-            $table->foreignId('location_id')->nullable()->constrained('locations')->onDelete('set null');
+            $table->foreignId('pf_location')->nullable()->constrained('locations')->onDelete('set null');
+            $table->foreignId('bayut_location')->nullable()->constrained('locations')->onDelete('set null');
             $table->enum('availability', ['available','under_offer','reserved','sold'])->nullable();
             $table->date('available_from')->nullable();
             $table->decimal('emirate_amount', 10, 2)->nullable();
@@ -65,13 +65,14 @@ return new class extends Migration
             $table->string('video_url')->nullable();
             $table->string('360_view_url')->nullable();
             $table->string('photos_urls')->nullable();
-            
+            $table->string('dtcm_permit_number')->nullable();
             // Final status column (renamed and values mapped)
-            $table->string('status')->default('unpublished'); // merged with status update
-            $table->enum('property_finder', ['0','1'])->default('0');
-            $table->enum('dubizzle', ['0','1'])->default('0');
-            $table->enum('website', ['0','1'])->default('0');
-            $table->enum('watermark', ['0','1'])->default('0');
+            $table->enum('status', ['draft', 'live', 'archived', 'published', 'unpublished', 'pocket'])->default('unpublished');
+
+            // $table->enum('property_finder', ['0','1'])->default('0');
+            // $table->enum('dubizzle', ['0','1'])->default('0');
+            // $table->enum('website', ['0','1'])->default('0');
+             $table->enum('watermark', ['0','1'])->default('0');
 
             // New platform flags
             $table->boolean('pf_enable')->default(false);
