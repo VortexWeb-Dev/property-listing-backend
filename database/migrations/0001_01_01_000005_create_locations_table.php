@@ -18,7 +18,7 @@ return new class extends Migration
             $table->string('sub_community')->nullable();
             $table->string('building');
             $table->string('location');
-            $table->string('type');
+            $table->enum('type', ['pf', 'bayut']);
             $table->timestamps();
         });
     }

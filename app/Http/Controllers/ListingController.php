@@ -32,7 +32,8 @@ class ListingController extends Controller
     // Super Admin: see all listings and all owners
     if ($role === "super_admin") {
         // Fetch all listings with detailed photos, amenities, developer, location, and company information
-        $listings = Listing::with(["photos", "amenities", "developer", "location", "company", "agent","owner"])
+        $listings = Listing::with(["photos", "amenities", "developer",  "pfLocation",
+        "bayutLocation", "company", "agent","owner"])
             ->get();
         
         return response()->json([
@@ -57,8 +58,16 @@ class ListingController extends Controller
         ->get();
 
     // Listings within the company
-    $listingsQuery = Listing::with(["photos", "amenities", "developer", "location", "company", "agent"])
-        ->where("company_id", $companyId);
+    $listingsQuery = Listing::with([
+        "photos",
+        "amenities",
+        "developer",
+        "company",
+        "agent",
+        "pfLocation",
+        "bayutLocation"
+    ])->where("company_id", $companyId);
+    
 
     // Agent: can only view their own listings
     if ($role === "agent") {
@@ -126,30 +135,79 @@ class ListingController extends Controller
 
         // Validation
         $validatedData = Validator::make($input, [
+            // Include all new fields for validation
             "reference_no" => "nullable|string|max:255",
             "title" => "required|string|max:255",
+            "title_deed" => "nullable|string|max:255",
             "property_type" => "required|string|max:255",
             "offering_type" => "required|string|max:255",
             "size" => "nullable|numeric",
+            "unit_no" => "nullable|string|max:255",
             "bedrooms" => "nullable|integer",
             "bathrooms" => "nullable|integer",
+            "parking" => "nullable|integer",
             "furnished" => ["nullable", Rule::in(["0", "1", "2"])],
+            "total_plot_size" => "nullable|numeric",
+            "plot_size" => "nullable|string|max:255",
+            "built_up_area" => "nullable|string|max:255",
+            "layout_type" => "nullable|string|max:255",
+            "project_name" => "nullable|string|max:255",
+            "project_status" => ["nullable", Rule::in(['1','2','3','4','5'])],
+            "sale_type" => ["nullable", Rule::in(['0','1','2'])],
             "developer_id" => "nullable|exists:developers,id",
-            "location_id" => "nullable|exists:locations,id",
-            "company_id" => "required|exists:companies,id",
-            "agent_id" => "required|exists:users,id",
-            "financial_status_id" => "nullable|exists:users,id",
-            "rera_permit_issue_date" => "nullable|date",
+            "build_year" => "nullable|string|max:255",
+            "customer" => "nullable|string|max:255",
+            "rera_permit_number" => "nullable|string|max:255",
+            "rera_issue_date" => "nullable|date",
             "rera_expiration_date" => "nullable|date",
             "contract_expiry_date" => "nullable|date",
+            "rental_period" => "nullable|string|max:255",
+            "price" => "nullable|numeric",
+            "payment_method" => "nullable|string|max:255",
+            "financial_status" => "nullable|string|max:255",
+            "sale_type_1" => "nullable|string|max:255",
+            "title_en" => "nullable|string|max:255",
+            "title_ar" => "nullable|string|max:255",
+            "desc_en" => "nullable|string",
+            "desc_ar" => "nullable|string",
+            "geopoints" => "nullable|string|max:255",
+            "listing_owner" => "nullable|string|max:255",
+            "landlord_name" => "nullable|string|max:255",
+            "landlord_contact" => "nullable|string|max:255",
+            "pf_location" => "nullable|exists:locations,id",
+            "bayut_location" => "nullable|exists:locations,id",
+            "availability" => ["nullable", Rule::in(['available','under_offer','reserved','sold'])],
             "available_from" => "nullable|date",
-            "status" => ["nullable", Rule::in(["0", "1", "2"])],
-            "amenities" => "nullable|array",
-            "amenities.*" => "exists:amenities,id",
+            "emirate_amount" => "nullable|numeric",
+            "payment_option" => "nullable|string|max:255",
+            "no_of_cheques" => ["nullable", Rule::in(['1','2'])],
+            "contract_charges" => "nullable|numeric",
+            "financial_status_id" => "nullable|exists:users,id",
+            "contract_expiry" => "nullable|string|max:255",
+            "floor_plan" => "nullable|string|max:255",
+            "qr_code" => "nullable|string|max:255",
+            "brochure" => "nullable|string|max:255",
+            "video_url" => "nullable|url",
+            "360_view_url" => "nullable|url",
             "photo_urls" => "required|array",
             "photo_urls.*.file_url" => "required|url",
             "photo_urls.*.is_main" => "required|boolean",
+
+
+            
+            "watermark" => ["nullable", Rule::in(['0','1'])],
+            "pf_enable" => "nullable|boolean",
+            "bayut_enable" => "nullable|boolean",
+            "dubizzle_enable" => "nullable|boolean",
+            "website_enable" => "nullable|boolean",
+            "company_id" => "required|exists:companies,id",
+            "agent_id" => "nullable|exists:users,id",
+            "owner_id" => "nullable|exists:users,id",
+            "status" => "nullable|in:draft,live,archived,published,unpublished,pocket",
+            "amenities" => "nullable|array",
+            "amenities.*" => "exists:amenities,id",
         ])->validate();
+        
 
         // Create the listing
         $listing = Listing::create(
@@ -174,9 +232,7 @@ class ListingController extends Controller
         }
 
         // Save all photo URLs in a field if needed
-        $listing->update([
-            "photos_urls" => json_encode(array_column($photo_urls, "file_url")),
-        ]);
+      
 
         return response()->json($listing->load(["amenities", "photos"]), 201);
     }
@@ -186,11 +242,12 @@ class ListingController extends Controller
         $validatedData = $request->validate([
             "remove_images" => "array",
             "remove_images.*" => "integer|exists:photos,id",
+        
             "photo_urls" => "nullable|array",
             "photo_urls.*.file_url" => "required_with:photo_urls|string",
             "photo_urls.*.is_main" => "required_with:photo_urls|boolean",
+        
             "main_image" => "nullable|string",
-
             "reference_no" => "nullable|string|max:255",
             "title" => "nullable|string|max:255",
             "title_deed" => "nullable|string|max:255",
@@ -201,41 +258,41 @@ class ListingController extends Controller
             "bedrooms" => "nullable|integer",
             "bathrooms" => "nullable|integer",
             "parking" => "nullable|integer",
-            "furnished" => "nullable|in:0,1,2",
+            "furnished" => "nullable|in:0,1,2", // 0=unfurnished, 1=semi, 2=furnished
             "total_plot_size" => "nullable|numeric",
             "plot_size" => "nullable|string",
             "built_up_area" => "nullable|string",
             "layout_type" => "nullable|string",
             "project_name" => "nullable|string",
-            "project_status" => "nullable|in:1,2,3,4,5",
-            "sale_type" => "nullable|in:0,1,2",
+            "project_status" => "nullable|in:1,2,3,4,5", // Enum values for project status
+            "sale_type" => "nullable|in:0,1,2", // Enum values for sale type
             "developer_id" => "nullable|exists:developers,id",
             "build_year" => "nullable|string",
             "customer" => "nullable|string",
-            "rera_permit" => "nullable|string",
-            "rera_number" => "nullable|string",
-            "rera_permit_issue_date" => "nullable|date",
+            "rera_permit_number" => "nullable|string",
+            "rera_issue_date" => "nullable|date",
             "rera_expiration_date" => "nullable|date",
             "contract_expiry_date" => "nullable|date",
             "rental_period" => "nullable|string",
-            "rprice_price" => "nullable|in:0,1,2",
+            "price" => "nullable|integer",
             "payment_method" => "nullable|string",
             "financial_status" => "nullable|string",
             "sale_type_1" => "nullable|string",
-            "title(english)" => "nullable|string",
-            "title(arabic)" => "nullable|string",
-            "description(english)" => "nullable|string",
-            "description(arabic)" => "nullable|string",
+            "title_en" => "nullable|string|max:255",
+            "title_ar" => "nullable|string|max:255",
+            "desc_en" => "nullable|string",
+            "desc_ar" => "nullable|string",
             "geopoints" => "nullable|string",
             "listing_owner" => "nullable|string",
             "landlord_name" => "nullable|string",
             "landlord_contact" => "nullable|string",
-            "location_id" => "nullable|exists:locations,id",
+            "pf_location" => "nullable|exists:locations,id",
+            "bayut_location" => "nullable|exists:locations,id",
             "availability" => "nullable|in:available,under_offer,reserved,sold",
             "available_from" => "nullable|date",
             "emirate_amount" => "nullable|numeric",
             "payment_option" => "nullable|string",
-            "no_of_cheques" => "nullable|in:1,2",
+            "no_of_cheques" => "nullable|in:1,2", // Enum values for cheques number
             "contract_charges" => "nullable|numeric",
             "financial_status_id" => "nullable|exists:users,id",
             "contract_expiry" => "nullable|string",
@@ -245,14 +302,23 @@ class ListingController extends Controller
             "video_url" => "nullable|string",
             "360_view_url" => "nullable|string",
             "photos_urls" => "nullable|string",
-            "status" => "nullable|in:0,1,2",
-            "property_finder" => "nullable|in:0,1",
-            "dubizzle" => "nullable|in:0,1",
-            "website" => "nullable|in:0,1",
+            "status" => "nullable|in:draft,live,archived,published,unpublished,pocket", // Enum values for status
             "watermark" => "nullable|in:0,1",
+        
+            "pf_enable" => "nullable|boolean",
+            "bayut_enable" => "nullable|boolean",
+            "dubizzle_enable" => "nullable|boolean",
+            "website_enable" => "nullable|boolean",
+        
             "company_id" => "nullable|exists:companies,id",
             "agent_id" => "nullable|exists:users,id",
+            "owner_id" => "nullable|exists:users,id",
+        
+            "amenities" => "nullable|array",
+            "amenities.*" => "exists:amenities,id", // Ensures amenities exist in the amenities table
         ]);
+        
+        
 
         // Restrict agent users from updating company_id and agent_id
         if (auth()->user()->role === "agent") {
@@ -315,7 +381,10 @@ class ListingController extends Controller
                 $fallback->update(["is_main" => true]);
             }
         }
-
+        if ($request->filled('amenities')) {
+            $listing->amenities()->sync($request->amenities);
+        }
+        
         // Step 5: Update listing fields
         $listing->update($validatedData);
 
@@ -338,9 +407,17 @@ class ListingController extends Controller
         $companyId = $user->company_id;
 
         // Check if the listing exists
-        $listing = Listing::with(["photos", "amenities", "developer", "location", "company", "agent", "owner"])
-            ->find($id);
-
+             $listing = Listing::with([
+                "photos",
+                "amenities",
+                "developer",
+                "company",
+                "agent",
+                "pfLocation",
+                "bayutLocation",
+                "owner"
+            ])->find($id);
+            
         // If listing not found, return 404 response
         if (!$listing) {
             return response()->json([
