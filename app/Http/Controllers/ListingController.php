@@ -192,9 +192,7 @@ class ListingController extends Controller
             "photo_urls" => "required|array",
             "photo_urls.*.file_url" => "required|url",
             "photo_urls.*.is_main" => "required|boolean",
-
-
-            
+            "dtcm_permit_number"=>"nullable|string|max:255",
             "watermark" => ["nullable", Rule::in(['0','1'])],
             "pf_enable" => "nullable|boolean",
             "bayut_enable" => "nullable|boolean",
@@ -302,6 +300,7 @@ class ListingController extends Controller
             "video_url" => "nullable|string",
             "360_view_url" => "nullable|string",
             "photos_urls" => "nullable|string",
+            "dtcm_permit_number"=>"nullable|string|max:255",
             "status" => "nullable|in:draft,live,archived,published,unpublished,pocket", // Enum values for status
             "watermark" => "nullable|in:0,1",
         
@@ -321,7 +320,7 @@ class ListingController extends Controller
 
         ]);
         
-        
+       
 
         // Restrict agent users from updating company_id and agent_id
         if (auth()->user()->role === "agent") {
