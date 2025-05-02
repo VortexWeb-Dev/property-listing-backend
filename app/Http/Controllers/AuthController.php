@@ -14,7 +14,7 @@ class AuthController extends Controller
             "name" => "required|max:255",
             "email" => "required|email|unique:users",
             "password" => "required|min:6|confirmed",
-            "role" => "required|in:super_admin,admin,agent,owner",
+            "role" => "in:super_admin,admin,agent,owner",
             "rera_number" =>
                 "required_if:role,agent|unique:users,rera_number|max:255", // Required if role is 'agent' and must be unique
                 "phone" => 'required|regex:/^\+?[0-9]{1,4}?[0-9]{6,14}$/',
