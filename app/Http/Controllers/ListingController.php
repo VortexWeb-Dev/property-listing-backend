@@ -137,7 +137,7 @@ class ListingController extends Controller
         $validatedData = Validator::make($input, [
             // Include all new fields for validation
             "reference_no" => "nullable|string|max:255",
-            "title" => "required|string|max:255",
+            "title" => "string|max:255",
             "title_deed" => "nullable|string|max:255",
             "property_type" => "required|string|max:255",
             "offering_type" => "required|string|max:255",
@@ -315,7 +315,10 @@ class ListingController extends Controller
             "owner_id" => "nullable|exists:users,id",
         
             "amenities" => "nullable|array",
-            "amenities.*" => "exists:amenities,id", // Ensures amenities exist in the amenities table
+            "amenities.*" => "integer|exists:amenities,id", // Ensures amenities exist in the amenities table
+
+    
+
         ]);
         
         
