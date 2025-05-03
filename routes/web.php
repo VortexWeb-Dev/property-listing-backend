@@ -5,7 +5,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return [
-        'message' => 'Hello World'
+        'message' => 'Listings'
     ];
 });
 
