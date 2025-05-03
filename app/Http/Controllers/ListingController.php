@@ -393,6 +393,7 @@ class ListingController extends Controller
         return response()->json([
             "message" => "Listing updated successfully",
             "listing" => $listing->load("photos"),
+            "updated_fields" => $validatedData,
         ]);
     }
 
