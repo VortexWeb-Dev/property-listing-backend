@@ -320,8 +320,8 @@ class ListingController extends Controller
 
         ]);
         
-       
-
+        
+        
         // Restrict agent users from updating company_id and agent_id
         if (auth()->user()->role === "agent") {
             unset($validatedData["agent_id"]);
@@ -393,6 +393,7 @@ class ListingController extends Controller
         return response()->json([
             "message" => "Listing updated successfully",
             "listing" => $listing->load("photos"),
+            'updated_fields' => $validatedData,
         ]);
     }
 
