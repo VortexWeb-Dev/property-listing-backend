@@ -17,75 +17,123 @@ use Illuminate\Support\Facades\Log;
 use Aws\S3\S3Client;
 class ListingController extends Controller
 {
-    public function index()
-{
+    public function index(Request $request)
+    {
+        if (Gate::denies("property.view")) {
+            abort(403, "YOU ARE NOT ALLOWED TO VIEW PROPERTIES.");
+        }
     
-    if (Gate::denies("property.view")) {
-        abort(403, "YOU ARE NOT ALLOWED TO EDIT USERS.");
-    }
-
-    $user = Auth::user();
-    $role = $user->role;
-    $userId = $user->id;
-    $companyId = $user->company_id;
-
-    // Super Admin: see all listings and all owners
-    if ($role === "super_admin") {
-        // Fetch all listings with detailed photos, amenities, developer, location, and company information
-        $listings = Listing::with(["photos", "amenities", "developer",  "pfLocation",
-        "bayutLocation", "company", "agent","owner"])
-            ->get();
-        
+        $user = Auth::user();
+        $role = $user->role;
+        $userId = $user->id;
+        $companyId = $user->company_id;
+    
+        // Base query with eager-loaded relationships
+        $query = Listing::with([
+            "photos", "amenities", "developer", "pfLocation", "bayutLocation", "company", "agent", "owner"
+        ]);
+    
+        // Super Admin: see everything
+        if ($role === "super_admin") {
+            // Apply filters for super_admin
+            $this->applyFilters($query, $request);
+            
+            $listings = $query->paginate(50);
+    
+            return response()->json([
+                "listings" => $listings,
+                "owners_for_all_companies" => User::where("role", "owner")->get(),
+            ]);
+        }
+    
+        // Others must be tied to a company
+        if ($companyId === null) {
+            return response()->json([
+                "error" => "You are not assigned to any company or do not have permission.",
+            ], 403);
+        }
+    
+        // Add company filter
+        $query->where("company_id", $companyId);
+    
+        // Role-specific filtering
+        if ($role === "agent") {
+            $query->where("agent_id", $userId);
+        }
+    
+        if ($role === "owner") {
+            $query->where("owner_id", $userId);
+        }
+    
+        // Apply filters for non-super-admins
+        $this->applyFilters($query, $request);
+    
+        $listings = $query->paginate(50);
+        $owners = User::where("role", "owner")->where("company_id", $companyId)->get();
+    
         return response()->json([
             "listings" => $listings,
-            "owners_for_all_companies" => User::where("role", "owner")->get(),
+            "owners_for_this_company" => $owners,
         ]);
     }
-
-    // Non-super_admin must be assigned to a company
-    if ($companyId === null) {
-        return response()->json(
-            [
-                "error" => "You are not assigned to any company or do not have permission.",
-            ],
-            403
-        );
-    }
-
-    // Owners for this company
-    $owners = User::where("role", "owner")
-        ->where("company_id", $companyId)
-        ->get();
-
-    // Listings within the company
-    $listingsQuery = Listing::with([
-        "photos",
-        "amenities",
-        "developer",
-        "company",
-        "agent",
-        "pfLocation",
-        "bayutLocation"
-    ])->where("company_id", $companyId);
     
+// For filteration
 
-    // Agent: can only view their own listings
-    if ($role === "agent") {
-        $listingsQuery->where("agent_id", $userId);
+private function applyFilters($query, Request $request)
+{
+    if ($request->filled('pf_location')) {
+        $query->where('pf_location', $request->pf_location);
     }
 
-    // Owner: can only view their own listings
-    if ($role === "owner") {
-        $listingsQuery->where("owner_id", $userId);
+    if ($request->filled('bayut_location')) {
+        $query->where('bayut_location', $request->bayut_location);
     }
 
-    $listings = $listingsQuery->get();
+    if ($request->filled('agent_id')) {
+        $query->where('agent_id', $request->agent_id);
+    }
 
-    return response()->json([
-        "listings" => $listings,
-        "owners_for_this_company" => $owners,
-    ]);
+    if ($request->filled('owner_id')) {
+        $query->where('owner_id', $request->owner_id);
+    }
+
+    if ($request->filled('developer')) {
+        $query->where('developer_id', $request->developer);
+    }
+
+    if ($request->filled('property_type')) {
+        $query->where('property_type', $request->property_type);
+    }
+
+    if ($request->filled('offering_type')) {
+        $query->where('offering_type', $request->offering_type);
+    }
+
+    if ($request->filled('price_min')) {
+        $query->where('price', '>=', $request->price_min);
+    }
+
+    if ($request->filled('price_max')) {
+        $query->where('price', '<=', $request->price_max);
+    }
+
+    if ($request->filled('bedrooms')) {
+        $query->where('bedrooms', $request->bedrooms);
+    }
+
+    if ($request->filled('bathrooms')) {
+        $query->where('bathrooms', $request->bathrooms);
+    }
+
+    if ($request->filled('size_min')) {
+        $query->where('size', '>=', $request->size_min);
+    }
+
+    if ($request->filled('size_max')) {
+        $query->where('size', '<=', $request->size_max);
+    }
 }
+
 
 
     public function store(Request $request)
