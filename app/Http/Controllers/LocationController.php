@@ -7,10 +7,31 @@ use Illuminate\Http\Request;
 
 class LocationController extends Controller
 {
-    public function index()
+        public function index(Request $request)
     {
-        return response()->json(Location::all());
+        $type = $request->query('type');
+        $search = $request->query('search');
+
+        // Enforce required 'type' filter (either 'pf' or 'bayut')
+        if (!$type || !in_array($type, ['pf', 'bayut'])) {
+            return response()->json([
+                'error' => 'The type parameter is required and must be either "pf" or "bayut".'
+            ], 422);
+        }
+
+        $locationsQuery = Location::where('type', $type);
+
+        // Optional search by 'location' column
+        if ($search) {
+            $locationsQuery->where('location', 'like', '%' . $search . '%');
+        }
+
+        // Apply pagination and append query strings to pagination URLs
+        $locations = $locationsQuery->paginate(1)->appends($request->query());
+
+        return response()->json($locations);
     }
+
 
     public function store(Request $request)
     {
