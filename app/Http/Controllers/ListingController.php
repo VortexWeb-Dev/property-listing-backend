@@ -38,7 +38,10 @@ class ListingController extends Controller
             // Apply filters for super_admin
             $this->applyFilters($query, $request);
             
-            $listings = $query->paginate(50);
+           
+            $listings = $query->paginate(1);
+            $listings->appends($request->query());
+
     
             return response()->json([
                 "listings" => $listings,
@@ -68,7 +71,9 @@ class ListingController extends Controller
         // Apply filters for non-super-admins
         $this->applyFilters($query, $request);
     
-        $listings = $query->paginate(50);
+        $listings = $query->paginate(1);
+        $listings->appends($request->query());
+
         $owners = User::where("role", "owner")->where("company_id", $companyId)->get();
     
         return response()->json([
@@ -79,60 +84,66 @@ class ListingController extends Controller
     
 // For filteration
 
-private function applyFilters($query, Request $request)
-{
-    if ($request->filled('pf_location')) {
-        $query->where('pf_location', $request->pf_location);
-    }
+    private function applyFilters($query, Request $request)
+    {
+        if ($request->filled('pf_location')) {
+            $query->where('pf_location', $request->pf_location);
+        }
 
-    if ($request->filled('bayut_location')) {
-        $query->where('bayut_location', $request->bayut_location);
-    }
+        if ($request->filled('bayut_location')) {
+            $query->where('bayut_location', $request->bayut_location);
+        }
 
-    if ($request->filled('agent_id')) {
-        $query->where('agent_id', $request->agent_id);
-    }
+        if ($request->filled('agent_id')) {
+            $query->where('agent_id', $request->agent_id);
+        }
 
-    if ($request->filled('owner_id')) {
-        $query->where('owner_id', $request->owner_id);
-    }
+        if ($request->filled('owner_id')) {
+            $query->where('owner_id', $request->owner_id);
+        }
 
-    if ($request->filled('developer')) {
-        $query->where('developer_id', $request->developer);
-    }
+        if ($request->filled('developer')) {
+            $query->where('developer_id', $request->developer);
+        }
 
-    if ($request->filled('property_type')) {
-        $query->where('property_type', $request->property_type);
-    }
+        if ($request->filled('property_type')) {
+            $query->where('property_type', $request->property_type);
+        }
 
-    if ($request->filled('offering_type')) {
-        $query->where('offering_type', $request->offering_type);
-    }
+        if ($request->filled('offering_type')) {
+            $query->where('offering_type', $request->offering_type);
+        }
 
-    if ($request->filled('price_min')) {
-        $query->where('price', '>=', $request->price_min);
-    }
+        if ($request->filled('price_min')) {
+            $query->where('price', '>=', $request->price_min);
+        }
 
-    if ($request->filled('price_max')) {
-        $query->where('price', '<=', $request->price_max);
-    }
+        if ($request->filled('price_max')) {
+            $query->where('price', '<=', $request->price_max);
+        }
 
-    if ($request->filled('bedrooms')) {
-        $query->where('bedrooms', $request->bedrooms);
-    }
+        if ($request->filled('bedrooms')) {
+            $query->where('bedrooms', $request->bedrooms);
+        }
 
-    if ($request->filled('bathrooms')) {
-        $query->where('bathrooms', $request->bathrooms);
-    }
+        if ($request->filled('bathrooms')) {
+            $query->where('bathrooms', $request->bathrooms);
+        }
 
-    if ($request->filled('size_min')) {
-        $query->where('size', '>=', $request->size_min);
-    }
+        if ($request->filled('size_min')) {
+            $query->where('size', '>=', $request->size_min);
+        }
 
-    if ($request->filled('size_max')) {
-        $query->where('size', '<=', $request->size_max);
+        if ($request->filled('size_max')) {
+            $query->where('size', '<=', $request->size_max);
+        }
+
+        // 🔍 Search by title
+        if ($request->filled('search')) {
+            $searchTerm = $request->search;
+            $query->where('title', 'like', '%' . $searchTerm . '%');
+        }
     }
-}
 
 
 
