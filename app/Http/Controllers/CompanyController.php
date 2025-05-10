@@ -21,122 +21,143 @@ class CompanyController extends Controller
         return Company::with('users')->get();
     }
 
-    public function store(Request $request)
-{
-    if (Gate::denies('company.create')) 
+        public function store(Request $request)
     {
-        return response()->json(['message' => 'You are not allowed to perform this action!'], 403);
-    }
+        if (Gate::denies('company.create')) 
+        {
+            return response()->json(['message' => 'You are not allowed to perform this action!'], 403);
+        }
 
-    $validated = $request->validate([
-        'name' => 'required|string',
-        'email' => 'required|email|unique:companies,email',
-        'phone' => 'nullable|string',
-        'website' => 'nullable|url',
-        'admins' => 'nullable|array',
-        'admins.*' => 'exists:users,id',
-    ]);
-
-    $requestedAdminIds = $validated['admins'] ?? [];
-
-    // Fetch users with given IDs and role = admin
-    $adminUsers = User::whereIn('id', $requestedAdminIds)
-                      ->where('role', 'admin')
-                      ->get();
-
-    // Check for invalid admin IDs
-    $validAdminIds = $adminUsers->pluck('id')->toArray();
-    $invalidAdminIds = array_diff($requestedAdminIds, $validAdminIds);
-
-    if (!empty($invalidAdminIds)) {
-        return response()->json([
-            'message' => 'Selected admin(s) are not valid'
-        ], 422);
-    }
-
-    // Check if any of the admins already have a company_id assigned
-    $alreadyAssignedAdmins = $adminUsers->filter(function ($admin) {
-        return $admin->company_id !== null;
-    });
-
-    if ($alreadyAssignedAdmins->isNotEmpty()) {
-        return response()->json([
-            'message' => 'One or more selected admins already belong to a company.',
-            'admins_with_company' => $alreadyAssignedAdmins->pluck('id')
-        ], 422);
-    }
-
-    // Proceed to create company
-    $company = Company::create([
-        'name' => $validated['name'],
-        'email' => $validated['email'],
-        'phone' => $validated['phone'] ?? null,
-        'website' => $validated['website'] ?? null,
-        'admins' => $validAdminIds, // assuming this is a JSON or array column
-    ]);
-
-    // Assign company_id to each admin user
-    User::whereIn('id', $validAdminIds)->update(['company_id' => $company->id]);
-
-    return response()->json($company->load('users'), 201); // load related users if needed
-}
-
-
-       public function update(Request $request, Company $company)
-    {
-   
         $validated = $request->validate([
-        'name' => 'sometimes|string',
-        'email' => 'sometimes|email|unique:companies,email,' . $company->id,
-        'phone' => 'nullable|string',
-        'website' => 'nullable|url',
+            'name' => 'required|string',
+            'email' => 'required|email|unique:companies,email',
+            'phone' => 'nullable|string',
+            'website' => 'nullable|url',
+            'admins' => 'nullable|array',
+            'admins.*' => 'exists:users,id',
+        ]);
 
-        // NEW
-        'admins_to_add' => 'nullable|array',
-        'admins_to_add.*' => 'exists:users,id',
+        $requestedAdminIds = $validated['admins'] ?? [];
 
-        'admins_to_remove' => 'nullable|array',
-        'admins_to_remove.*' => 'exists:users,id',
-    ]);
-   
-    // Get current admin IDs from company
-    $currentAdmins = $company->admins ?? [];
-  
-    // Get only valid admin IDs to add
-    $add = User::whereIn('id', $validated['admins_to_add'] ?? [])
-        ->where('role', 'admin')
-        ->pluck('id')
-        ->toArray();
-      
-    //  Validation check: if some provided IDs are not admins, return error
-    if (count($add) !== count($validated['admins_to_add'] ?? [])) {
-        return response()->json([
-            'message' => 'One or more users to add are not admins.'
-        ], 422);
+        // Fetch users with given IDs and role = admin
+        $adminUsers = User::whereIn('id', $requestedAdminIds)
+                        ->where('role', 'admin')
+                        ->get();
+
+        // Check for invalid admin IDs
+        $validAdminIds = $adminUsers->pluck('id')->toArray();
+        $invalidAdminIds = array_diff($requestedAdminIds, $validAdminIds);
+
+        if (!empty($invalidAdminIds)) {
+            return response()->json([
+                'message' => 'Selected admin(s) are not valid'
+            ], 422);
+        }
+
+        // Check if any of the admins already have a company_id assigned
+        $alreadyAssignedAdmins = $adminUsers->filter(function ($admin) {
+            return $admin->company_id !== null;
+        });
+
+        if ($alreadyAssignedAdmins->isNotEmpty()) {
+            return response()->json([
+                'message' => 'One or more selected admins already belong to a company.',
+                'admins_with_company' => $alreadyAssignedAdmins->pluck('id')
+            ], 422);
+        }
+
+        // Proceed to create company
+        $company = Company::create([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'phone' => $validated['phone'] ?? null,
+            'website' => $validated['website'] ?? null,
+            'admins' => $validAdminIds, // assuming this is a JSON or array column
+        ]);
+
+        // Assign company_id to each admin user
+        User::whereIn('id', $validAdminIds)->update(['company_id' => $company->id]);
+
+        return response()->json($company->load('users'), 201); // load related users if needed
     }
-   
-    // Admins to remove
-    $remove = $validated['admins_to_remove'] ?? [];
-   
-    // Final admins = (current + add) - remove
-    $updatedAdmins = collect($currentAdmins)
-        ->merge($add)
-        ->unique()
-        ->diff($remove)
-        ->values()
-        ->toArray();
-       
-        $updateData = collect($validated)->except(['admins_to_add', 'admins_to_remove'])->toArray();
 
-        // Add the actual admins update
+
+
+    public function update(Request $request, Company $company)
+    {
+        $validated = $request->validate([
+            'name' => 'sometimes|string',
+            'email' => 'sometimes|email|unique:companies,email,' . $company->id,
+            'phone' => 'nullable|string',
+            'website' => 'nullable|url',
+    
+            'admins_to_add' => 'nullable|array',
+            'admins_to_add.*' => 'exists:users,id',
+    
+            'admins_to_remove' => 'nullable|array',
+            'admins_to_remove.*' => 'exists:users,id',
+        ]);
+    
+        $adminsToAddIds = $validated['admins_to_add'] ?? [];
+        $adminsToRemoveIds = $validated['admins_to_remove'] ?? [];
+    
+        // ✅ Prevent adding and removing the same admin
+        $conflictIds = array_intersect($adminsToAddIds, $adminsToRemoveIds);
+        if (!empty($conflictIds)) {
+            return response()->json([
+                'message' => 'A user cannot be added and removed at the same time.',
+                'conflict_ids' => $conflictIds,
+            ], 422);
+        }
+    
+        // ✅ Fetch users who are valid: role = admin, company_id = null
+        $adminUsersToAdd = User::whereIn('id', $adminsToAddIds)
+            ->where('role', 'admin')
+            ->whereNull('company_id')
+            ->get();
+    
+        $validAddIds = $adminUsersToAdd->pluck('id')->toArray();
+        $invalidAddIds = array_diff($adminsToAddIds, $validAddIds);
+    
+        if (!empty($invalidAddIds)) {
+            return response()->json([
+                'message' => 'Some users are not valid admins or already belong to a company.',
+                'invalid_user_ids' => $invalidAddIds,
+            ], 422);
+        }
+    
+        // ✅ Assign company_id to valid new admins (use save to trigger model events)
+        foreach ($adminUsersToAdd as $user) {
+            $user->company_id = $company->id;
+            $user->save();
+        }
+    
+        // ✅ Remove company_id for users being removed (only if they belong to this company)
+        User::whereIn('id', $adminsToRemoveIds)
+            ->where('company_id', $company->id)
+            ->update(['company_id' => null]);
+    
+        // ✅ Calculate new admins list
+        $currentAdmins = $company->admins ?? [];
+        $updatedAdmins = collect($currentAdmins)
+            ->merge($validAddIds)          // Add new
+            ->unique()
+            ->diff($adminsToRemoveIds)     // Remove removed
+            ->values()
+            ->toArray();
+    
+        // ✅ Update company fields
+        $updateData = collect($validated)
+            ->except(['admins_to_add', 'admins_to_remove'])
+            ->toArray();
+    
         $updateData['admins'] = $updatedAdmins;
-        
+    
         $company->update($updateData);
-        
-        return response()->json($company);
     
-    
+        return response()->json($company->fresh('users'));
     }
+    
     
     public function show($company_id)
     {
