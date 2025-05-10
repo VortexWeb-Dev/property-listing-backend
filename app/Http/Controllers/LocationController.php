@@ -27,7 +27,7 @@ class LocationController extends Controller
         }
 
         // Apply pagination and append query strings to pagination URLs
-        $locations = $locationsQuery->paginate(1)->appends($request->query());
+        $locations = $locationsQuery->paginate(50)->appends($request->query());
 
         return response()->json($locations);
     }
