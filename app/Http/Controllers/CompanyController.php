@@ -21,52 +21,66 @@ class CompanyController extends Controller
         return Company::with('users')->get();
     }
 
-       public function store(Request $request)
+    public function store(Request $request)
+{
+    if (Gate::denies('company.create')) 
     {
-       // below code insures admin and agent won't be able to create a company
-       if (Gate::denies('company.create')) 
-        {
-            return response()->json(['message' => 'You are not allowed to perform this action!'], 403);
-        }
-   
-        
-        $validated = $request->validate([
-            'name' => 'required|string',
-            'email' => 'required|email|unique:companies,email',
-            'phone' => 'nullable|string',
-            'website' => 'nullable|url',
-            'admins' => 'nullable|array',
-            'admins.*' => 'exists:users,id',
-        ]);
-    
-        // Get all provided admin IDs
-        $requestedAdminIds = $validated['admins'] ?? [];
-    
-        // Fetch actual admin IDs from DB that match requested IDs
-        $validAdminIds = User::whereIn('id', $requestedAdminIds)
-                             ->where('role', 'admin')
-                             ->pluck('id')
-                             ->toArray();
-    
-        // If any provided admin ID is not a valid admin, throw error
-        $invalidAdminIds = array_diff($requestedAdminIds, $validAdminIds);
-    
-        if (!empty($invalidAdminIds)) 
-        {
-            return response()->json([
-                'message' => 'Selected admin(s) are not valid'
-              
-            ], 422);
-        }
-    
-        // Proceed to create company
-        $company = Company::create([
-            ...$validated,
-            'admins' => $validAdminIds,
-        ]);
-    
-        return response()->json($company, 201);
+        return response()->json(['message' => 'You are not allowed to perform this action!'], 403);
     }
+
+    $validated = $request->validate([
+        'name' => 'required|string',
+        'email' => 'required|email|unique:companies,email',
+        'phone' => 'nullable|string',
+        'website' => 'nullable|url',
+        'admins' => 'nullable|array',
+        'admins.*' => 'exists:users,id',
+    ]);
+
+    $requestedAdminIds = $validated['admins'] ?? [];
+
+    // Fetch users with given IDs and role = admin
+    $adminUsers = User::whereIn('id', $requestedAdminIds)
+                      ->where('role', 'admin')
+                      ->get();
+
+    // Check for invalid admin IDs
+    $validAdminIds = $adminUsers->pluck('id')->toArray();
+    $invalidAdminIds = array_diff($requestedAdminIds, $validAdminIds);
+
+    if (!empty($invalidAdminIds)) {
+        return response()->json([
+            'message' => 'Selected admin(s) are not valid'
+        ], 422);
+    }
+
+    // Check if any of the admins already have a company_id assigned
+    $alreadyAssignedAdmins = $adminUsers->filter(function ($admin) {
+        return $admin->company_id !== null;
+    });
+
+    if ($alreadyAssignedAdmins->isNotEmpty()) {
+        return response()->json([
+            'message' => 'One or more selected admins already belong to a company.',
+            'admins_with_company' => $alreadyAssignedAdmins->pluck('id')
+        ], 422);
+    }
+
+    // Proceed to create company
+    $company = Company::create([
+        'name' => $validated['name'],
+        'email' => $validated['email'],
+        'phone' => $validated['phone'] ?? null,
+        'website' => $validated['website'] ?? null,
+        'admins' => $validAdminIds, // assuming this is a JSON or array column
+    ]);
+
+    // Assign company_id to each admin user
+    User::whereIn('id', $validAdminIds)->update(['company_id' => $company->id]);
+
+    return response()->json($company->load('users'), 201); // load related users if needed
+}
+
 
        public function update(Request $request, Company $company)
     {
