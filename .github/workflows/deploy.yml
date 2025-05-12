@@ -1,46 +1,34 @@
-name: Deploy Laravel to EC2
+	name: Deploy Laravel to EC2
 
 on:
   push:
     branches:
-      - main  # Trigger the deployment on push to the main branch
+      - main
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest  # Runs the job on the latest Ubuntu runner
+    runs-on: ubuntu-latest
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3  # Checkout the code from the repository
+      uses: actions/checkout@v3
 
     - name: Setup SSH
       run: |
-        mkdir -p ~/.ssh  # Create SSH directory
-        echo "${{ secrets.EC2_KEY }}" > ~/.ssh/id_rsa  # Add the EC2 private key
-        chmod 600 ~/.ssh/id_rsa  # Set the correct permissions for the private key
-        ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts  # Add the EC2 host to known hosts to prevent SSH warnings
+        mkdir -p ~/.ssh
+        echo "${{ secrets.EC2_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
 
-        - name: Deploy to EC2
+    - name: Deploy to EC2
       run: |
-        ssh -v ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
-          echo "Navigating to project directory"
-          cd ${{ secrets.PROJECT_PATH }} || exit
-
-          echo "Pulling the latest code"
-          git pull origin main || exit
-
-          echo "Installing Composer dependencies"
-          composer install --no-interaction --prefer-dist --optimize-autoloader || exit
-
-          echo "Running fresh migrations"
-          php artisan migrate:fresh --force || exit  # DANGER: Drops all tables and recreates them
-
-          echo "Caching configuration, routes, and views"
-          php artisan config:cache || exit
-          php artisan route:cache || exit
-          php artisan view:cache || exit
-
-          echo "Restarting Nginx"
-          sudo systemctl restart nginx || exit
+        ssh ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+          cd ${{ secrets.PROJECT_PATH }}
+          git pull origin main
+          composer install --no-interaction --prefer-dist --optimize-autoloader
+          php artisan migrate:fresh --force
+          php artisan config:cache
+          php artisan route:cache
+          php artisan view:cache
+          sudo systemctl restart nginx
         EOF
-
