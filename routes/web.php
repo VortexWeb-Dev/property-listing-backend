@@ -5,7 +5,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return [
-        'message' => 'refreshed'
+        'message' => 'Testing Listings By Vortex Web....'
     ];
 });
 
