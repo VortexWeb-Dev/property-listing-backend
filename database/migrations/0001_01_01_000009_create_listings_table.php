@@ -67,7 +67,7 @@ return new class extends Migration
             $table->string('photos_urls')->nullable();
             $table->string('dtcm_permit_number')->nullable();
             // Final status column (renamed and values mapped)
-            $table->enum('status', ['draft', 'live', 'archived', 'published', 'unpublished', 'pocket'])->default('unpublished');
+            $table->enum('status', ['draft', 'live', 'archived', 'published', 'unpublished', 'pocket','deleted'])->default('unpublished');
 
             // $table->enum('property_finder', ['0','1'])->default('0');
             // $table->enum('dubizzle', ['0','1'])->default('0');

@@ -12,6 +12,7 @@ use App\Http\Controllers\ListingController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\DeveloperController;
 use App\Http\Controllers\PresignedController;
+use App\Http\Controllers\RecycleBinController;
 use App\Http\Controllers\ListingActionController;
 
 Route::post('/register', [AuthController::class, 'register']);
@@ -35,10 +36,20 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/associatedadmins', [UserController::class, 'associatedadmins']);
     Route::post('/listing/action', [ListingActionController::class, 'handleAction']);
     Route::post('/listing/agentbulktransfer', [ListingActionController::class, 'agentbulktransfer']);
-    Route::get('/xml/propertyfinder', [XmlController::class, 'propertyFinder']);
-    Route::get('/xml/bayut-dubizzle', [XmlController::class, 'bayutDubizzle']);
-    Route::get('/xml/website', [XmlController::class, 'website']);
+    
+    // xml
+    Route::get('/xml/{slug}/propertyfinder', [XmlController::class, 'propertyFinder']);
+    Route::get('/xml/{slug}/bayut-dubizzle', [XmlController::class, 'bayutDubizzle']);
+    Route::get('/xml/{slug}/website', [XmlController::class, 'website']);
+    
     Route::get('/listOwners', [ListingController::class, 'listOwners']);
+    
+    // for file upload
     Route::get('/s3/presigned-url', [PresignedController::class, 'getPresignedUrl']);
+
+    // Recycle-bin
+    Route::get('/recycle-bin/listings', [RecycleBinController::class, 'index']);
+    Route::put('/recycle-bin/listings/{id}/restore', [RecycleBinController::class, 'restore']);
+    Route::delete('/recycle-bin/listings/{id}', [RecycleBinController::class, 'destroy']);
     
 });

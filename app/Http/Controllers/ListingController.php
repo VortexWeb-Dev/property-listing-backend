@@ -530,15 +530,19 @@ class ListingController extends Controller
     }
 
 
-    public function destroy($id)
+        public function destroy($id)
     {
         if (Gate::denies("property.create")) {
             abort(403, "YOU ARE NOT ALLOWED TO EDIT USERS.");
         }
 
-        Listing::destroy($id);
-        return response()->json(["message" => "Deleted"]);
+        $listing = Listing::findOrFail($id);
+        $listing->status = 'deleted';
+        $listing->save();
+
+        return response()->json(["message" => "Listing marked as deleted"]);
     }
+
 
     // For super admin get all company and their agents list
     public function createInfo()

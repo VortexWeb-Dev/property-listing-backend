@@ -20,26 +20,27 @@ jobs:
         chmod 600 ~/.ssh/id_rsa  # Set the correct permissions for the private key
         ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts  # Add the EC2 host to known hosts to prevent SSH warnings
 
-    - name: Deploy to EC2
+        - name: Deploy to EC2
       run: |
-        ssh -v ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'  # SSH into the EC2 instance
+        ssh -v ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
           echo "Navigating to project directory"
-          cd ${{ secrets.PROJECT_PATH }} || exit  # Navigate to your project directory on EC2
+          cd ${{ secrets.PROJECT_PATH }} || exit
 
           echo "Pulling the latest code"
-          git pull origin main || exit  # Pull the latest code from the main branch
+          git pull origin main || exit
 
           echo "Installing Composer dependencies"
-          composer install --no-interaction --prefer-dist --optimize-autoloader || exit  # Install PHP dependencies
+          composer install --no-interaction --prefer-dist --optimize-autoloader || exit
 
-          echo "Running database migrations"
-          php artisan migrate --force || exit  # Run Laravel database migrations
+          echo "Running fresh migrations"
+          php artisan migrate:fresh --force || exit  # DANGER: Drops all tables and recreates them
 
           echo "Caching configuration, routes, and views"
-          php artisan config:cache || exit  # Cache the configuration
-          php artisan route:cache || exit  # Cache the routes
-          php artisan view:cache || exit  # Cache the views
+          php artisan config:cache || exit
+          php artisan route:cache || exit
+          php artisan view:cache || exit
 
           echo "Restarting Nginx"
-          sudo systemctl restart nginx || exit  # Restart Nginx to apply the changes
+          sudo systemctl restart nginx || exit
         EOF
+
