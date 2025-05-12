@@ -3,36 +3,43 @@ name: Deploy Laravel to EC2
 on:
   push:
     branches:
-      - main
+      - main  # Trigger the deployment on push to the main branch
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest  # Runs the job on the latest Ubuntu runner
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+    - name: Checkout code
+      uses: actions/checkout@v3  # Checkout the code from the repository
 
-      - name: Setup SSH
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.EC2_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+    - name: Setup SSH
+      run: |
+        mkdir -p ~/.ssh  # Create SSH directory
+        echo "${{ secrets.EC2_KEY }}" > ~/.ssh/id_rsa  # Add the EC2 private key
+        chmod 600 ~/.ssh/id_rsa  # Set the correct permissions for the private key
+        ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts  # Add the EC2 host to known hosts to prevent SSH warnings
 
-      - name: Deploy to EC2
-        run: |
-          ssh ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << EOF
-            set -e
-            set -x
+    - name: Deploy to EC2
+      run: |
+        ssh -v ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'  # SSH into the EC2 instance
+          echo "Navigating to project directory"
+          cd ${{ secrets.PROJECT_PATH }} || exit  # Navigate to your project directory on EC2
 
-            cd ${{ secrets.PROJECT_PATH }}
-            git pull origin main
-            git status
-            composer install --no-interaction --prefer-dist --optimize-autoloader
-            php artisan migrate:fresh --force
-            php artisan config:cache
-            php artisan route:cache
-            php artisan view:cache
-            sudo systemctl restart nginx
-          EOF
+          echo "Pulling the latest code"
+          git pull origin main || exit  # Pull the latest code from the main branch
+
+          echo "Installing Composer dependencies"
+          composer install --no-interaction --prefer-dist --optimize-autoloader || exit  # Install PHP dependencies
+
+          echo "Running database migrations"
+          php artisan migrate --force || exit  # Run Laravel database migrations
+
+          echo "Caching configuration, routes, and views"
+          php artisan config:cache || exit  # Cache the configuration
+          php artisan route:cache || exit  # Cache the routes
+          php artisan view:cache || exit  # Cache the views
+
+          echo "Restarting Nginx"
+          sudo systemctl restart nginx || exit  # Restart Nginx to apply the changes
+        EOF
