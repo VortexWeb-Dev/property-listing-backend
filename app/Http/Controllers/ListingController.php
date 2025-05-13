@@ -31,7 +31,7 @@ class ListingController extends Controller
         // Base query with eager-loaded relationships
         $query = Listing::with([
             "photos", "amenities", "developer", "pfLocation", "bayutLocation", "company", "agent", "owner"
-        ]);
+        ])->where("status", "!=", "deleted");
     
         // Super Admin: see everything
         if ($role === "super_admin") {
@@ -39,7 +39,7 @@ class ListingController extends Controller
             $this->applyFilters($query, $request);
             
            
-            $listings = $query->paginate(1);
+            $listings = $query->paginate(50);
             $listings->appends($request->query());
 
     
@@ -71,7 +71,7 @@ class ListingController extends Controller
         // Apply filters for non-super-admins
         $this->applyFilters($query, $request);
     
-        $listings = $query->paginate(1);
+        $listings = $query->paginate(50);
         $listings->appends($request->query());
 
         $owners = User::where("role", "owner")->where("company_id", $companyId)->get();

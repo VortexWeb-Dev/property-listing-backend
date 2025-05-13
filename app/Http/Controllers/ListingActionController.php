@@ -9,84 +9,91 @@ use Illuminate\Support\Facades\Auth;
 
 class ListingActionController extends Controller
 {
-    public function handleAction(Request $request)
-{
-    if(Auth::user()->role==="agent"){
-        return response()->json('U are not allowed to perform this action');
-    }
-    $request->validate([
-        'action' => 'required|string',
-        'propertyId' => 'required|array',
-        'propertyId.*' => 'integer|exists:listings,id',
-    ]);
-
-    $listings = Listing::whereIn('id', $request->propertyId)->get();
-
-    foreach ($listings as $listing) {
-        switch ($request->action) {
-            case 'publish_pf':
-                $listing->pf_enable = true;
-                break;
-            case 'publish_bayut':
-                $listing->bayut_enable = true;
-                break;
-            case 'publish_dubizzle':
-                $listing->dubizzle_enable = true;
-                break;
-            case 'publish_website':
-                $listing->website_enable = true;
-                break;
-            case 'publish_all':
-                $listing->pf_enable = true;
-                $listing->bayut_enable = true;
-                $listing->dubizzle_enable = true;
-                $listing->website_enable = true;
-                break;
-            case 'unpublish_pf':
-                $listing->pf_enable = false;
-                break;
-            case 'unpublish_bayut':
-                $listing->bayut_enable = false;
-                break;
-            case 'unpublish_dubizzle':
-                $listing->dubizzle_enable = false;
-                break;
-            case 'unpublish_website':
-                $listing->website_enable = false;
-                break;
-            case 'unpublish_all':
-                $listing->pf_enable = false;
-                $listing->bayut_enable = false;
-                $listing->dubizzle_enable = false;
-                $listing->website_enable = false;
-                break;
-            case 'archive':
-                $listing->status = 'archived';
-                break;
-            case 'delete':
-                $listing->delete();
-                continue 2; // Skip saving and move to next
-            default:
-                return response()->json(['error' => 'Invalid action'], 400);
+        public function handleAction(Request $request)
+        {
+            if (Auth::user()->role === "agent") {
+                return response()->json(['error' => 'You are not allowed to perform this action'], 403);
+            }
+        
+            $request->validate([
+                'action' => 'required|string',
+                'propertyId' => 'required|array',
+                'propertyId.*' => 'integer|exists:listings,id',
+            ]);
+        
+            $listings = Listing::whereIn('id', $request->propertyId)->get();
+        
+            $manualStatusActions = ['archived', 'draft', 'live', 'pocket', 'deleted'];
+        
+            foreach ($listings as $listing) {
+                switch ($request->action) {
+                    case 'publish_pf':
+                        $listing->pf_enable = true;
+                        break;
+                    case 'publish_bayut':
+                        $listing->bayut_enable = true;
+                        break;
+                    case 'publish_dubizzle':
+                        $listing->dubizzle_enable = true;
+                        break;
+                    case 'publish_website':
+                        $listing->website_enable = true;
+                        break;
+                    case 'publish_all':
+                        $listing->pf_enable = true;
+                        $listing->bayut_enable = true;
+                        $listing->dubizzle_enable = true;
+                        $listing->website_enable = true;
+                        break;
+                    case 'unpublish_pf':
+                        $listing->pf_enable = false;
+                        break;
+                    case 'unpublish_bayut':
+                        $listing->bayut_enable = false;
+                        break;
+                    case 'unpublish_dubizzle':
+                        $listing->dubizzle_enable = false;
+                        break;
+                    case 'unpublish_website':
+                        $listing->website_enable = false;
+                        break;
+                    case 'unpublish_all':
+                        $listing->pf_enable = false;
+                        $listing->bayut_enable = false;
+                        $listing->dubizzle_enable = false;
+                        $listing->website_enable = false;
+                        break;
+                    case 'archived':
+                    case 'draft':
+                    case 'live':
+                    case 'pocket':
+                    case 'deleted':
+                        $listing->status = $request->action;
+                        break;
+                    default:
+                        return response()->json(['error' => 'Invalid action'], 400);
+                }
+        
+                // Only update status based on enables if not a manual status action
+                if (!in_array($request->action, $manualStatusActions)) {
+                    $listing->status = (
+                        $listing->pf_enable ||
+                        $listing->bayut_enable ||
+                        $listing->dubizzle_enable ||
+                        $listing->website_enable
+                    ) ? 'published' : 'unpublished';
+                }
+        
+                $listing->save();
+            }
+        
+            return response()->json([
+                'status' => 'success',
+                'action_performed' => $request->action,
+                'updated_listings' => $listings
+            ]);
         }
-
-        // Set status based on enable flags
-        if (
-            $listing->pf_enable ||
-            $listing->bayut_enable ||
-            $listing->dubizzle_enable ||
-            $listing->website_enable
-        ) {
-            $listing->status = 'published';
-        } else {
-            $listing->status = 'unpublished';
-        }
-
-        $listing->save();
-    }
-
-    return response()->json(['message' => 'Action performed successfully']);
-}
+    
 
 
 public function agentbulktransfer(Request $request)
