@@ -107,10 +107,13 @@ public function agentbulktransfer(Request $request)
 
     $user = Auth::user(); // Make sure user is authenticated
     
-    if($user!="agent"){
+  
+ 
+    if (!$user || $user->role !== "agent") {
         return response()->json(['error' => 'Unauthorized or missing role'], 403);
     }
-    if (!$user || !$user->company_id) {
+
+    if (!$user->company_id) {
         return response()->json(['error' => 'Unauthorized or missing company ID'], 403);
     }
 
@@ -131,6 +134,7 @@ public function agentbulktransfer(Request $request)
 
         // Fetch listings that belong to this company and match provided property IDs
         $listings = Listing::whereIn('id', $request->propertyIds)
+            ->where('agent_id', $user->id)
             ->whereHas('agent', function ($query) use ($user) {
                 $query->where('company_id', $user->company_id);
             })
