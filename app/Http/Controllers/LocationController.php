@@ -83,18 +83,47 @@ class LocationController extends Controller
         ]);
     }
 
-    public function destroy($location_id)
-    {
-        $location = Location::find($location_id);
 
-        if (!$location) {
-            return response()->json(["message" => "Location not found"], 404);
+    public function destroy(Request $request)
+    {
+        $ids = $request->input('ids');
+
+        // Validate input
+        if (!is_array($ids) || empty($ids)) {
+            return response()->json([
+                "message" => "Please provide a non-empty array of location IDs."
+            ], 400);
         }
 
-        $location->delete();
+        foreach ($ids as $id) {
+            if (!is_numeric($id)) {
+                return response()->json([
+                    "message" => "Invalid ID in array: $id"
+                ], 400);
+            }
+        }
 
-        return response()->json(["message" => "Location deleted successfully"]);
+        // Find existing locations
+        $locations = Location::whereIn('id', $ids)->get();
+        $existingIds = $locations->pluck('id')->toArray();
+        $missingIds = array_diff($ids, $existingIds);
+
+        if (!empty($missingIds)) {
+            return response()->json([
+                "message" => "Some location IDs were not found.",
+                "missing_ids" => array_values($missingIds)
+            ], 404);
+        }
+
+        // Delete locations
+        Location::whereIn('id', $existingIds)->delete();
+
+        return response()->json([
+            "message" => "Location(s) deleted successfully.",
+            "deleted_ids" => $existingIds
+        ]);
     }
+
 
     public function bulkUploadLocations(Request $request)
     {

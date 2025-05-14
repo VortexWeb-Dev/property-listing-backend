@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\Company;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 
@@ -45,22 +46,36 @@ class AuthController extends Controller
             "email" => "required|email|exists:users",
             "password" => "required|min:6",
         ]);
-
+    
         $user = User::where("email", $request->email)->first();
-
+    
         if (!$user || !Hash::check($request->password, $user->password)) {
-            return [
-                "message" => "Invalid credentials",
-            ];
+            return response()->json(["message" => "Invalid credentials"], 401);
         }
-
+    
         $token = $user->createToken($user->name)->plainTextToken;
-
-        return [
+    
+        $company = null;
+        if ($user->company_id) {
+            $company = Company::select(
+                'id',
+                'name',
+                'slug',
+                'email',
+                'phone',
+                'website',
+                'logo_url',
+                'watermark_url'
+            )->find($user->company_id);
+        }
+    
+        return response()->json([
             "user" => $user,
+            "company" => $company,
             "token" => $token,
-        ];
+        ]);
     }
+    
 
     public function logout(Request $request)
     {

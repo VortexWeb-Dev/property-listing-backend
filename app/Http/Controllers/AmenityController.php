@@ -65,19 +65,49 @@ class AmenityController extends Controller
         ]);
     }
 
-    
-    public function destroy($amenity_id)
+     public function destroy(Request $request)
     {
-        $amenity = Amenity::find($amenity_id);
+        $ids = $request->input('ids');
 
-        if (!$amenity) 
-        {
-            return response()->json(['message' => 'Amenity not found'], 404);
+        if (!is_array($ids) || empty($ids)) {
+            return response()->json([
+                "message" => "Please provide a non-empty array of amenity IDs."
+            ], 400);
         }
 
-        $amenity->delete();
+        foreach ($ids as $id) {
+            if (!is_numeric($id)) {
+                return response()->json([
+                    "message" => "Invalid ID in array: $id"
+                ], 400);
+            }
+        }
 
-        return response()->json(['message' => 'Amenity deleted successfully']);
+        $amenities = Amenity::whereIn('id', $ids)->get();
+
+        $existingIds = $amenities->pluck('id')->toArray();
+        $missingIds = array_diff($ids, $existingIds);
+
+        if (!empty($missingIds)) {
+            return response()->json([
+                "message" => "Some amenity IDs were not found.",
+                "missing_ids" => array_values($missingIds)
+            ], 404);
+        }
+
+        // Step 1: Detach related listings
+        foreach ($amenities as $amenity) {
+            $amenity->listings()->detach(); // This removes records from pivot table
+        }
+
+        // Step 2: Delete amenities
+        Amenity::whereIn('id', $existingIds)->delete();
+
+        return response()->json([
+            "message" => "Amenity(ies) deleted successfully.",
+            "deleted_ids" => $existingIds
+        ]);
     }
+
 
 }
