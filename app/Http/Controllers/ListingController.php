@@ -608,4 +608,30 @@ class ListingController extends Controller
 
         return response()->json(["message" => "Unauthorized"], 403);
     }
+
+    //agent list for agent transfer when agent is logged in 
+    
+        public function agentsList_for_agent()
+    {
+        $user = Auth::user();
+
+        // Only agents are allowed
+        if ($user->role !== 'agent') {
+            return response()->json(["message" => "Unauthorized"], 403);
+        }
+
+        $companyId = $user->company_id;
+
+        // Fetch all other agents in the same company except the logged-in user
+        $agents = User::where('role', 'agent')
+            ->where('company_id', $companyId)
+            ->where('id', '!=', $user->id)
+            ->get();
+
+        return response()->json([
+            "company_id" => $companyId,
+            "agents" => $agents
+        ]);
+    }
+    
 }

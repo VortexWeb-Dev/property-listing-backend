@@ -173,10 +173,45 @@ class CompanyController extends Controller
     
 
 
-        public function destroy(Company $company)
+    public function destroy(Request $request)
     {
-        $company->delete();
-        return response()->json('Company Deleted', 204);
+        $ids = $request->input('ids');
+    
+        // Step 1: Validate input
+        if (!is_array($ids) || empty($ids)) {
+            return response()->json([
+                "message" => "Please provide a non-empty array of company IDs."
+            ], 400);
+        }
+    
+        // Step 2: Validate ID format
+        foreach ($ids as $id) {
+            if (!is_numeric($id)) {
+                return response()->json([
+                    "message" => "Invalid ID in array: $id"
+                ], 400);
+            }
+        }
+    
+        // Step 3: Get existing companies
+        $companies = Company::whereIn('id', $ids)->get();
+        $existingIds = $companies->pluck('id')->toArray();
+        $missingIds = array_diff($ids, $existingIds);
+    
+        if (!empty($missingIds)) {
+            return response()->json([
+                "message" => "Some company IDs were not found.",
+                "missing_ids" => array_values($missingIds)
+            ], 404);
+        }
+    
+        // Step 4: Delete companies
+        Company::whereIn('id', $existingIds)->delete();
+    
+        return response()->json([
+            "message" => "Company(ies) deleted successfully.",
+            "deleted_ids" => $existingIds
+        ], 200);
     }
 
 }
