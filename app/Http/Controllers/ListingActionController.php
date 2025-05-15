@@ -168,7 +168,7 @@ public function agentbulktransfer(Request $request)
         $user = auth()->user();
     
         // Ensure current user is an agent and has a company
-        if ($user->role !== 'agent' || !$user->company_id) {
+        if ($user->role !== 'owner' || !$user->company_id) {
             return response()->json(['error' => 'Unauthorized or missing company.'], 403);
         }
     
