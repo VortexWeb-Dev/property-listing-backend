@@ -653,5 +653,32 @@ class ListingController extends Controller
             "agents" => $agents
         ]);
     }
+
+        public function agentsList_for_owner()
+    {
+        $user = Auth::user();
+
+        // Only owners are allowed
+        if ($user->role !== 'owner') {
+            return response()->json(["message" => "Unauthorized"], 403);
+        }
+
+        if (is_null($user->company_id)) {
+            return response()->json(["message" => "Owner does not belong to any company."], 400);
+        }
+
+        $companyId = $user->company_id;
+
+        // Fetch all agents in the same company
+        $agents = User::where('role', 'agent')
+            ->where('company_id', $companyId)
+            ->get();
+
+        return response()->json([
+            "company_id" => $companyId,
+            "agents" => $agents
+        ]);
+    }
+
     
 }

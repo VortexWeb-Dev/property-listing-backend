@@ -57,6 +57,8 @@ Route::middleware('auth:sanctum')->group(function () {
     
     Route::get('/listOwners', [ListingController::class, 'listOwners']);
     Route::get('/agents/list', [ListingController::class, 'agentsList_for_agent']); //agent list for agent transfer
+    Route::get('/agents/list/forowners', [ListingController::class, 'agentsList_for_owner']); //agent list for owners
+
     
 
     // for file upload 
