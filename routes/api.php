@@ -53,6 +53,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/associatedadmins', [UserController::class, 'associatedadmins']);
     Route::post('/listing/action', [ListingActionController::class, 'handleAction']);
     Route::post('/listing/agentbulktransfer', [ListingActionController::class, 'agentbulktransfer']);
+    Route::post('/listing/ownerbulktransfer', [ListingActionController::class, 'ownerbulktransfer']);
+    
     Route::get('/listOwners', [ListingController::class, 'listOwners']);
     Route::get('/agents/list', [ListingController::class, 'agentsList_for_agent']); //agent list for agent transfer
     
