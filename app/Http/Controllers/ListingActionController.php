@@ -96,103 +96,112 @@ class ListingActionController extends Controller
     
 
 
-public function agentbulktransfer(Request $request)
-{
-    
-    $request->validate([
-        'action' => 'required|string',
-        'propertyIds' => 'required|array',
-        'propertyIds.*' => 'integer|exists:listings,id',
-    ]);
+        public function agentbulktransfer(Request $request)
+        {
+            $request->validate([
+                'action' => 'required|string',
+                'propertyIds' => 'required|array',
+                'propertyIds.*' => 'integer|exists:listings,id',
+            ]);
 
-    $user = Auth::user(); // Make sure user is authenticated
-    
-  
- 
-    if (!$user || $user->role !== "agent") {
-        return response()->json(['error' => 'Unauthorized or missing role'], 403);
+            $user = Auth::user(); // Make sure user is authenticated
+            
+        
+        
+            if (!$user || $user->role !== "agent") {
+                return response()->json(['error' => 'Unauthorized or missing role'], 403);
+            }
+
+            if (!$user->company_id) {
+                return response()->json(['error' => 'Unauthorized or missing company ID'], 403);
+            }
+
+            if ($request->action === 'transfer_agent') {
+                $request->validate([
+                    'agent_id' => 'required|integer|exists:users,id',
+                ]);
+
+                // Validate that target agent exists and belongs to same company
+                $targetAgent = User::where('id', $request->agent_id)
+                    ->where('company_id', $user->company_id)
+                    ->where('role', 'agent')
+                    ->first();
+
+                if (!$targetAgent) {
+                    return response()->json(['error' => 'Target agent does not exist or does not belong to the this company'], 403);
+                }
+
+                // Fetch listings that belong to this company and match provided property IDs
+                $listings = Listing::whereIn('id', $request->propertyIds)
+                    ->where('agent_id', $user->id)
+                    ->whereHas('agent', function ($query) use ($user) {
+                        $query->where('company_id', $user->company_id);
+                    })
+                    ->get();
+
+                if ($listings->isEmpty()) {
+                    return response()->json(['error' => 'No valid listings found for transfer'], 404);
+                }
+
+                foreach ($listings as $listing) {
+                    $listing->agent_id = $request->agent_id;
+                    $listing->save();
+                }
+
+                return response()->json([
+                    'message' => 'Property transferred successfully',
+                    'transferred_listing_ids' => $listings->pluck('id'),
+                ]);
+            }
+
     }
 
-    if (!$user->company_id) {
-        return response()->json(['error' => 'Unauthorized or missing company ID'], 403);
+    public function ownerbulktransfer(Request $request)
+    {
+        if ($request->action === 'transfer_owner') {
+            $request->validate([
+                'propertyIds' => 'required|array',
+                'propertyIds.*' => 'exists:listings,id',
+                'owner_id' => 'required|exists:users,id',
+            ]);
+
+            $user = auth()->user();
+
+            // Ensure current user is an owner and has a company
+            if ($user->role !== 'owner' || !$user->company_id) {
+                return response()->json(['error' => 'Unauthorized or missing company.'], 403);
+            }
+
+            // Verify the target owner belongs to the same company and has 'owner' role
+            $targetOwner = User::where('id', $request->owner_id)
+                ->where('company_id', $user->company_id)
+                ->where('role', 'owner')
+                ->first();
+
+            if (!$targetOwner) {
+                return response()->json(['error' => 'Invalid owner or not part of your company.'], 403);
+            }
+
+            // Check if all propertyIds belong to the logged-in owner and his company
+            $listings = Listing::whereIn('id', $request->propertyIds)
+                ->where('owner_id', $user->id)
+                ->where('company_id', $user->company_id)
+                ->get();
+
+            if (count($listings) !== count($request->propertyIds)) {
+                return response()->json(['error' => 'One or more listings do not belong to you or your company.'], 403);
+            }
+
+            // Transfer ownership
+            Listing::whereIn('id', $request->propertyIds)->update([
+                'owner_id' => $request->owner_id,
+            ]);
+
+            return response()->json(['message' => 'Ownership transferred successfully.']);
+        }
+
+        return response()->json(['message' => 'Error Action'], 400);
     }
-
-    if ($request->action === 'transfer_agent') {
-        $request->validate([
-            'agent_id' => 'required|integer|exists:users,id',
-        ]);
-
-        // Validate that target agent exists and belongs to same company
-        $targetAgent = User::where('id', $request->agent_id)
-            ->where('company_id', $user->company_id)
-            ->where('role', 'agent')
-            ->first();
-
-        if (!$targetAgent) {
-            return response()->json(['error' => 'Target agent does not exist or does not belong to the this company'], 403);
-        }
-
-        // Fetch listings that belong to this company and match provided property IDs
-        $listings = Listing::whereIn('id', $request->propertyIds)
-            ->where('agent_id', $user->id)
-            ->whereHas('agent', function ($query) use ($user) {
-                $query->where('company_id', $user->company_id);
-            })
-            ->get();
-
-        if ($listings->isEmpty()) {
-            return response()->json(['error' => 'No valid listings found for transfer'], 404);
-        }
-
-        foreach ($listings as $listing) {
-            $listing->agent_id = $request->agent_id;
-            $listing->save();
-        }
-
-        return response()->json([
-            'message' => 'Listings transferred successfully',
-            'transferred_listing_ids' => $listings->pluck('id'),
-        ]);
-    }
-
-
-    // transfer owner
-
-    if ($request->action === 'transfer_owner') {
-        $request->validate([
-            'propertyIds' => 'required|array',
-            'propertyIds.*' => 'exists:listings,id',
-            'owner_id' => 'required|exists:users,id',
-        ]);
-    
-        $user = auth()->user();
-    
-        // Ensure current user is an agent and has a company
-        if ($user->role !== 'owner' || !$user->company_id) {
-            return response()->json(['error' => 'Unauthorized or missing company.'], 403);
-        }
-    
-        // Verify the target owner belongs to the same company and has 'owner' role
-        $targetOwner = \App\Models\User::where('id', $request->owner_id)
-            ->where('company_id', $user->company_id)
-            ->where('role', 'owner')
-            ->first();
-    
-        if (!$targetOwner) {
-            return response()->json(['error' => 'Invalid owner or not part of your company.'], 403);
-        }
-    
-        // Update listings
-        Listing::whereIn('id', $request->propertyIds)->update([
-            'owner_id' => $request->owner_id
-        ]);
-    
-        return response()->json(['message' => 'Ownership transferred successfully.']);
-    }
-    
-
-
-}
 
  
 }

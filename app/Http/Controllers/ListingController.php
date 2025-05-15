@@ -583,30 +583,50 @@ class ListingController extends Controller
         ]);
     }
 
-    public function listOwners()
+        public function listOwners()
     {
         $user = Auth::user();
 
-        if ($user->role === "super_admin") {
-            $owners = User::with("company")
-                ->where("role", "owner")
+        if ($user->role === 'super_admin') {
+            $owners = User::with('company')
+                ->where('role', 'owner')
                 ->get();
 
-            return response()->json(["owners" => $owners]);
+            return response()->json(['owners' => $owners]);
         }
 
-        if ($user->role === "admin") {
-            $owners = User::where("role", "owner")
-                ->where("company_id", $user->company_id)
+        if ($user->role === 'admin') {
+            if (is_null($user->company_id)) {
+                return response()->json(['message' => 'Admin user does not have a company_id.'], 400);
+            }
+
+            $owners = User::where('role', 'owner')
+                ->where('company_id', $user->company_id)
                 ->get();
 
             return response()->json([
-                "company_id" => $user->company_id,
-                "owners" => $owners,
+                'company_id' => $user->company_id,
+                'owners' => $owners,
             ]);
         }
 
-        return response()->json(["message" => "Unauthorized"], 403);
+        if ($user->role === 'owner') {
+            if (is_null($user->company_id)) {
+                return response()->json(['message' => 'Owner user does not have a company_id.'], 400);
+            }
+
+            $owners = User::where('role', 'owner')
+                ->where('company_id', $user->company_id)
+                ->where('id', '!=', $user->id) // exclude self
+                ->get();
+
+            return response()->json([
+                'company_id' => $user->company_id,
+                'owners' => $owners,
+            ]);
+        }
+
+        return response()->json(['message' => 'Unauthorized'], 403);
     }
 
     //agent list for agent transfer when agent is logged in 
