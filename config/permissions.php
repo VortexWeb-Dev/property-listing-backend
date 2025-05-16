@@ -16,6 +16,10 @@ return [
         'company.create',
         'company.edit',
         'company.delete',
+        'course.view',
+        'course.create',
+        'course.edit',
+        'course.delete',
     ],
 
     'admin' => [

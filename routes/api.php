@@ -6,6 +6,7 @@ use App\Http\Controllers\XmlController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\PhotoController;
+use App\Http\Controllers\CourseController;
 use App\Http\Controllers\AmenityController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\ListingController;
@@ -74,4 +75,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/recycle-bin/listings/{id}/restore', [RecycleBinController::class, 'restore']);
     Route::delete('/recycle-bin/listings/{id}', [RecycleBinController::class, 'destroy']);
     
+
+    // Acedemic 
+    
+    // courses
+    Route::post('/courses', [CourseController::class, 'store']);
+    Route::put('/courses/{id}', [CourseController::class, 'update']);
+    Route::delete('/courses/{id}', [CourseController::class, 'destroy']);
+    Route::get('/courses', [CourseController::class, 'index']);
+    Route::get('/courses/{id}', [CourseController::class, 'show']);
 });
