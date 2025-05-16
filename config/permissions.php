@@ -20,6 +20,14 @@ return [
         'course.create',
         'course.edit',
         'course.delete',
+        'lesson.show',
+        'lesson.create',
+        'lesson.edit',
+        'lesson.delete',
+        'tag.view',
+        'tag.create',
+        'tag.edit',
+        'tag.delete',
     ],
 
     'admin' => [
@@ -30,6 +38,8 @@ return [
         'property.view',
         'property.create',
         'property.edit',
+        'course.view',
+        'tag.view',
     ],
 
     'agent' => [
@@ -37,6 +47,8 @@ return [
         'property.create',
         'property.edit',
         'property.delete',
+        'course.view',
+        'tag.view',
     ],
 
     'owner' => [
@@ -44,5 +56,7 @@ return [
         'property.create',
         'property.edit',
         'property.delete',
+        'course.view',
+        'tag.view',
     ],
 ];
