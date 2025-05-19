@@ -17,6 +17,8 @@ use App\Http\Controllers\DeveloperController;
 use App\Http\Controllers\PresignedController;
 use App\Http\Controllers\RecycleBinController;
 use App\Http\Controllers\ListingActionController;
+use App\Http\Controllers\OffplanListingController;
+use App\Http\Controllers\ListingAnalyticsController;
 
 // Authentication
 Route::post('/register', [AuthController::class, 'register']);
@@ -84,4 +86,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('courses', CourseController::class);
     Route::apiResource('lesson', LessonController::class);
     Route::apiResource('tags',  TagController::class);
+
+    // Analytics
+    Route::get('/listing-analytics', [ListingAnalyticsController::class, 'index']);
+
+    Route::apiResource('offplanListing', OffplanListingController::class);
+    
 });
