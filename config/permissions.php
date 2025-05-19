@@ -28,6 +28,11 @@ return [
         'tag.create',
         'tag.edit',
         'tag.delete',
+        'view.analytics',
+        'offplanlisting.view',
+        'offplanlisting.create',
+        'offplanlisting.update',
+        'offplanlisting.delete',
     ],
 
     'admin' => [
@@ -40,6 +45,10 @@ return [
         'property.edit',
         'course.view',
         'tag.view',
+        'offplanlisting.view',
+        'offplanlisting.create',
+        'offplanlisting.update',
+        'offplanlisting.delete',
     ],
 
     'agent' => [
@@ -49,6 +58,10 @@ return [
         'property.delete',
         'course.view',
         'tag.view',
+        'offplanlisting.view',
+        'offplanlisting.create',
+        'offplanlisting.update',
+        'offplanlisting.delete',
     ],
 
     'owner' => [
@@ -58,5 +71,9 @@ return [
         'property.delete',
         'course.view',
         'tag.view',
+        'offplanlisting.view',
+        'offplanlisting.create',
+        'offplanlisting.update',
+        'offplanlisting.delete',
     ],
 ];
