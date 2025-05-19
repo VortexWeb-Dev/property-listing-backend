@@ -9,6 +9,12 @@ Route::get('/', function () {
     ];
 });
 
+Route::get('/check', function () {
+    return [
+        'message' => 'New Feature Analytics and Offplan Listing'
+    ];
+});
+
 Route::get('/test', function () {
     return Company::with('users')->get();
 });

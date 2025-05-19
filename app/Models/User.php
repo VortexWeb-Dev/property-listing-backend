@@ -57,6 +57,11 @@ class User extends Authenticatable
         return $this->belongsTo(Company::class);
     }
     
-    
+        public function hasPermission(string $permission): bool
+    {
+        $permissions = config("permissions.{$this->role}", []);
+        return in_array($permission, $permissions);
+    }
+
     
 }
