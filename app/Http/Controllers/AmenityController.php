@@ -17,7 +17,7 @@ class AmenityController extends Controller
     {
         $validated = $request->validate([
             'amenity_name' => 'required|string',
-            'amenity_code' => 'required|string|unique:amenities',
+            'amenity_code' => 'required|string',
             'amenity_type' => 'nullable|in:commercial,private',
         ]);
 
@@ -51,11 +51,7 @@ class AmenityController extends Controller
 
         $validated = $request->validate([
             'amenity_name' => 'sometimes|string',
-            'amenity_code' => [
-                'sometimes',
-                'string',
-                Rule::unique('amenities', 'amenity_code')->ignore($amenity->id),
-            ],
+            'amenity_code' => 'sometimes|string',
             'amenity_type' => 'nullable|in:commercial,private',
         ]);
 
