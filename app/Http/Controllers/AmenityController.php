@@ -18,6 +18,7 @@ class AmenityController extends Controller
         $validated = $request->validate([
             'amenity_name' => 'required|string',
             'amenity_code' => 'required|string|unique:amenities',
+            'amenity_type' => 'nullable|in:commercial,private',
         ]);
 
         return response()->json(Amenity::create($validated), 201);
@@ -55,6 +56,7 @@ class AmenityController extends Controller
                 'string',
                 Rule::unique('amenities', 'amenity_code')->ignore($amenity->id),
             ],
+            'amenity_type' => 'nullable|in:commercial,private',
         ]);
 
         $amenity->update($validated);
