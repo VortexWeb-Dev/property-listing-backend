@@ -22,7 +22,7 @@ class Listing extends Model
         'financial_status_id', 'contract_expiry', 'floor_plan', 'qr_code', 'brochure',
         'video_url', '360_view_url', 'watermark', 'pf_enable', 'bayut_enable',
         'dubizzle_enable', 'website_enable', 'company_id', 'agent_id', 'owner_id',
-        'status','dtcm_permit_number'
+        'status','dtcm_permit_number','landlord_email','comments'
     ];
     
     
