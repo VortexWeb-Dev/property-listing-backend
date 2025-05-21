@@ -211,7 +211,17 @@ class ListingController extends Controller
             "built_up_area" => "nullable|string|max:255",
             "layout_type" => "nullable|string|max:255",
             "project_name" => "nullable|string|max:255",
-            "project_status" => ["nullable", Rule::in(['1','2','3','4','5'])],
+            "project_status" => [
+                "nullable",
+                Rule::in([
+                    'Off Plan',
+                    'Off-Plan Primary',
+                    'Off-Plan Secondary',
+                    'Ready Primary',
+                    'Ready Secondary',
+                    'Completed'
+                ]),
+            ],
             "sale_type" => ["nullable", Rule::in(['0','1','2'])],
             "developer_id" => "nullable|exists:developers,id",
             "build_year" => "nullable|string|max:255",
@@ -263,6 +273,8 @@ class ListingController extends Controller
             "status" => "nullable|in:draft,live,archived,published,unpublished,pocket",
             "amenities" => "nullable|array",
             "amenities.*" => "exists:amenities,id",
+            'landlord_email' => 'nullable|email|max:255',
+            'comments' => 'nullable|string|max:1000',
         ])->validate();
         
 
@@ -321,7 +333,7 @@ class ListingController extends Controller
             "built_up_area" => "nullable|string",
             "layout_type" => "nullable|string",
             "project_name" => "nullable|string",
-            "project_status" => "nullable|in:1,2,3,4,5", // Enum values for project status
+            "project_status" => "nullable|in:Off Plan,Off-Plan Primary,Off-Plan Secondary,Ready Primary,Ready Secondary,Completed", // Enum values for project status
             "sale_type" => "nullable|in:0,1,2", // Enum values for sale type
             "developer_id" => "nullable|exists:developers,id",
             "build_year" => "nullable|string",
@@ -374,7 +386,8 @@ class ListingController extends Controller
         
             "amenities" => "nullable|array",
             "amenities.*" => "integer|exists:amenities,id", // Ensures amenities exist in the amenities table
-
+            'landlord_email' => 'nullable|email|max:255',
+            'comments' => 'nullable|string|max:1000',
     
 
         ]);
