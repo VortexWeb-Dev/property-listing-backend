@@ -20,12 +20,13 @@
         <plot_size>{{ $listing->total_plot_size }}</plot_size>
         <furnished><![CDATA[{{ ucfirst($listing->furnished) }}]]></furnished>
         <agent>
-            <id>{{ $listing->agent_id }}</id>
-            <name>{{ $listing->agent->name ?? 'Agent' }}</name>
-            <email>{{ $listing->agent->email ?? 'agent@example.com' }}</email>
-            <phone>{{ $listing->agent->phone ?? '0000000000' }}</phone>
-            <photo>{{ $listing->agent->photo_url ?? '' }}</photo>
+            <id>{{ optional($listing->resolvedAgent($channel))->id }}</id>
+            <name>{{ optional($listing->resolvedAgent($channel))->name }}</name>
+            <email>{{ optional($listing->resolvedAgent($channel))->email }}</email>
+            <phone>{{ optional($listing->resolvedAgent($channel))->phone }}</phone>
+            <photo>{{ optional($listing->resolvedAgent($channel))->photo }}</photo>
         </agent>
+        
         <photo>
             @foreach(json_decode($listing->photos_urls, true) ?? [] as $photo)
                 <url last_updated="{{ $listing->updated_at->format('Y-m-d H:i:s') }}">

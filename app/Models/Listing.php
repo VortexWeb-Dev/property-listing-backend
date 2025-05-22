@@ -93,4 +93,14 @@ class Listing extends Model
         return $this->belongsTo(Company::class, 'company_id');
     }
     
+    public function resolvedAgent($channel)
+{
+    return match ($channel) {
+        'propertyfinder' => $this->pfAgent ?? $this->agent,
+        'website' => $this->websiteAgent ?? $this->agent,
+        'bayut_dubizzle' => $this->bayutDubizzleAgent ?? $this->agent,
+        default => $this->agent,
+    };
+}
+
 }
