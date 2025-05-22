@@ -22,7 +22,9 @@ class Listing extends Model
         'financial_status_id', 'contract_expiry', 'floor_plan', 'qr_code', 'brochure',
         'video_url', '360_view_url', 'watermark', 'pf_enable', 'bayut_enable',
         'dubizzle_enable', 'website_enable', 'company_id', 'agent_id', 'owner_id',
-        'status','dtcm_permit_number','landlord_email','comments'
+        'status','dtcm_permit_number','landlord_email','comments','pf_agent_id',
+        'website_agent_id', 'bayut_dubizzle_agent_id'
+
     ];
     
     
@@ -41,6 +43,22 @@ class Listing extends Model
     {
         return $this->belongsTo(User::class, 'agent_id');
     }
+    
+        public function pfAgent()
+    {
+        return $this->belongsTo(User::class, 'pf_agent_id');
+    }
+
+    public function websiteAgent()
+    {
+        return $this->belongsTo(User::class, 'website_agent_id');
+    }
+
+    public function bayutDubizzleAgent()
+    {
+        return $this->belongsTo(User::class, 'bayut_dubizzle_agent_id');
+    }
+
 
     public function owner()
     {
@@ -74,4 +92,5 @@ class Listing extends Model
     {
         return $this->belongsTo(Company::class, 'company_id');
     }
+    
 }

@@ -30,7 +30,9 @@ class ListingController extends Controller
     
         // Base query with eager-loaded relationships
         $query = Listing::with([
-            "photos", "amenities", "developer", "pfLocation", "bayutLocation", "company", "agent", "owner"
+            "photos", "amenities", "developer", "pfLocation", "bayutLocation", "company", "agent", "owner",  'pfAgent',
+            'websiteAgent',
+            'bayutDubizzleAgent'
         ])->where("status", "!=", "deleted");
     
         // Super Admin: see everything
@@ -275,6 +277,10 @@ class ListingController extends Controller
             "amenities.*" => "exists:amenities,id",
             'landlord_email' => 'nullable|email|max:255',
             'comments' => 'nullable|string|max:1000',
+            "pf_agent_id" => "nullable|exists:users,id",
+            "website_agent_id" => "nullable|exists:users,id",
+            "bayut_dubizzle_agent_id" => "nullable|exists:users,id",
+
         ])->validate();
         
 
@@ -388,6 +394,9 @@ class ListingController extends Controller
             "amenities.*" => "integer|exists:amenities,id", // Ensures amenities exist in the amenities table
             'landlord_email' => 'nullable|email|max:255',
             'comments' => 'nullable|string|max:1000',
+            "pf_agent_id" => "nullable|exists:users,id",
+            "website_agent_id" => "nullable|exists:users,id",
+            "bayut_dubizzle_agent_id" => "nullable|exists:users,id",
     
 
         ]);
@@ -489,7 +498,10 @@ class ListingController extends Controller
                 "agent",
                 "pfLocation",
                 "bayutLocation",
-                "owner"
+                "owner",
+                'pfAgent',
+                'websiteAgent',
+                'bayutDubizzleAgent',
             ])->find($id);
             
         // If listing not found, return 404 response
