@@ -109,57 +109,70 @@ class DeveloperController extends Controller
     }
 
 
-        public function bulkUploadDevelopers(Request $request)
+    public function bulkUploadDevelopers(Request $request)
     {
         $request->validate([
             "csv_file" => "required|file|mimes:csv,txt",
         ]);
-
+    
         $file = $request->file("csv_file");
-        $csvData = array_map("str_getcsv", file($file));
-
-        $headers = array_map("trim", array_shift($csvData));
+        $path = $file->getRealPath();
+    
+        $handle = fopen($path, 'r');
+        if (!$handle) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Could not open the CSV file.',
+            ], 500);
+        }
+    
+        $headers = fgetcsv($handle);
+        $headers = array_map('trim', $headers);
         $requiredHeaders = ["Name", "Email", "Phone", "Website"];
-
+    
         if (array_diff($requiredHeaders, $headers)) {
+            fclose($handle);
             return response()->json([
                 "status" => "error",
                 "message" => "CSV must include headers: " . implode(", ", $requiredHeaders),
             ], 422);
         }
-
+    
         $insertData = [];
+        $seenEmails = [];
         $skippedEmails = [];
-
-        foreach ($csvData as $index => $row) {
-            $rowData = array_combine($headers, $row);
-
-            if (empty($rowData["Email"])) {
-                return response()->json([
-                    "status" => "error",
-                    "message" => "Row " . ($index + 2) . " is missing required 'Email' field.",
-                ], 422);
-            }
-
-            $email = trim($rowData["Email"]);
-
-            // Skip if email already exists in DB
-            if (Developer::where("email", $email)->exists()) {
-                $skippedEmails[] = $email;
+        $rowIndex = 1;
+    
+        while (($row = fgetcsv($handle)) !== false) {
+            $rowIndex++;
+    
+            if (count($row) != count($headers)) {
+                $skippedEmails[] = "Row $rowIndex (column mismatch)";
                 continue;
             }
-
-            // Handle phone format
+    
+            $rowData = array_combine($headers, $row);
+            $email = trim($rowData["Email"]);
+    
+            if (empty($email)) {
+                $skippedEmails[] = "Row $rowIndex (missing email)";
+                continue;
+            }
+    
+            // Check if already in DB
+            if (Developer::where("email", $email)->exists() || in_array($email, $seenEmails)) {
+                $skippedEmails[] = "Row $rowIndex ($email duplicate)";
+                continue;
+            }
+    
             $rawPhone = $rowData["Phone"] ?? null;
             $phone = trim((string)$rawPhone);
-
+    
             if (preg_match('/e\+?/i', $phone)) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => "The phone number in row " . ($index + 2) . " is in wrong format."
-                ], 422);
+                $skippedEmails[] = "Row $rowIndex (invalid phone format)";
+                continue;
             }
-
+    
             $insertData[] = [
                 "name" => $rowData["Name"] ?? null,
                 "email" => $email,
@@ -168,52 +181,27 @@ class DeveloperController extends Controller
                 "created_at" => now(),
                 "updated_at" => now(),
             ];
+    
+            $seenEmails[] = $email;
+    
+            if (count($insertData) >= 1000) {
+                Developer::insert($insertData);
+                $insertData = [];
+            }
         }
-
+    
+        fclose($handle);
+    
         if (!empty($insertData)) {
-            // Remove duplicates within CSV
-            $uniqueData = [];
-            $seenEmails = [];
-
-            foreach ($insertData as $row) {
-                if (!in_array($row['email'], $seenEmails)) {
-                    $seenEmails[] = $row['email'];
-                    $uniqueData[] = $row;
-                } else {
-                    $skippedEmails[] = $row['email'];
-                }
-            }
-
-            try {
-                Developer::insert($uniqueData);
-            } catch (\Illuminate\Database\QueryException $e) {
-                preg_match("/Duplicate entry '([^']+)'/", $e->getMessage(), $matches);
-                $duplicateEmail = $matches[1] ?? null;
-
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Some developers could not be imported due to duplicate entries.',
-                    'details' => $duplicateEmail
-                        ? "The email '$duplicateEmail' already exists in the system."
-                        : 'Duplicate entry found.',
-                    'suggestion' => 'Please check your CSV file and remove or correct duplicate entries.',
-                    'error_code' => 1062,
-                ], 409);
-            } catch (\Exception $e) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'An unexpected error occurred while importing developers.',
-                    'error' => $e->getMessage(),
-                ], 500);
-            }
+            Developer::insert($insertData);
         }
-
+    
         return response()->json([
             "status" => "success",
             "message" => "Developers imported successfully.",
-            "inserted" => isset($uniqueData) ? count($uniqueData) : 0,
+            "inserted" => count($seenEmails),
             "skipped" => count($skippedEmails),
-            "skipped_emails" => array_values(array_unique($skippedEmails)),
+            // "skipped_details" => $skippedEmails,
         ]);
     }
 
