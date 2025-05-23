@@ -130,11 +130,18 @@ class LocationController extends Controller
         $request->validate([
             "csv_file" => "required|file|mimes:csv,txt",
         ]);
-
+    
         $file = $request->file("csv_file");
-        $csvData = array_map("str_getcsv", file($file));
-
-        $headers = array_map("trim", array_shift($csvData));
+        $path = $file->getRealPath();
+    
+        $handle = fopen($path, 'r');
+        if (!$handle) {
+            return response()->json(['status' => 'error', 'message' => 'Could not open the file.'], 500);
+        }
+    
+        $headers = fgetcsv($handle);
+        $headers = array_map('trim', $headers);
+    
         $requiredHeaders = [
             "City",
             "Community",
@@ -143,64 +150,49 @@ class LocationController extends Controller
             "Location",
             "Type",
         ];
-
+    
         if (array_diff($requiredHeaders, $headers)) {
-            return response()->json(
-                [
-                    "status" => "error",
-                    "message" =>
-                        "CSV must include headers: " .
-                        implode(", ", $requiredHeaders),
-                ],
-                422
-            );
+            fclose($handle);
+            return response()->json([
+                "status" => "error",
+                "message" => "CSV must include headers: " . implode(", ", $requiredHeaders),
+            ], 422);
         }
-
+    
         $insertData = [];
-
-        foreach ($csvData as $index => $row) {
+        $rowIndex = 1; // Header is row 1
+        $skippedRows = [];
+    
+        while (($row = fgetcsv($handle)) !== false) {
+            $rowIndex++;
+    
+            if (count($row) != count($headers)) {
+                $skippedRows[] = $rowIndex;
+                continue; // Skip rows with wrong number of columns
+            }
+    
             $rowData = array_combine($headers, $row);
-
-            // Check required fields
+    
+            // Validate required fields
             $missingFields = [];
-            foreach (
-                ["City", "Community", "Location", "Type"]
-                as $requiredField
-            ) {
+            foreach (["City", "Community", "Location", "Type"] as $requiredField) {
                 if (empty($rowData[$requiredField])) {
                     $missingFields[] = $requiredField;
                 }
             }
-
+    
             if (!empty($missingFields)) {
-                return response()->json(
-                    [
-                        "status" => "error",
-                        "message" =>
-                            "Row " .
-                            ($index + 2) .
-                            " is missing fields: " .
-                            implode(", ", $missingFields),
-                    ],
-                    422
-                );
+                $skippedRows[] = $rowIndex;
+                continue; // Skip invalid row
             }
-
+    
             // Validate 'Type'
             $type = strtolower(trim($rowData["Type"]));
             if (!in_array($type, ["pf", "bayut"])) {
-                return response()->json(
-                    [
-                        "status" => "error",
-                        "message" =>
-                            "Row " .
-                            ($index + 2) .
-                            ": 'Type' must be 'pf' or 'bayut'.",
-                    ],
-                    422
-                );
+                $skippedRows[] = $rowIndex;
+                continue; // Skip invalid row
             }
-
+    
             $insertData[] = [
                 "city" => $rowData["City"],
                 "community" => $rowData["Community"],
@@ -211,13 +203,25 @@ class LocationController extends Controller
                 "created_at" => now(),
                 "updated_at" => now(),
             ];
+    
+            if (count($insertData) >= 1000) {
+                Location::insert($insertData);
+                $insertData = [];
+            }
         }
-
-        Location::insert($insertData);
-
+    
+        fclose($handle);
+    
+        // Insert remaining rows
+        if (!empty($insertData)) {
+            Location::insert($insertData);
+        }
+    
         return response()->json([
             "status" => "success",
             "message" => "Locations imported successfully.",
+            "skipped_rows" => count($skippedRows),
         ]);
     }
+
 }
