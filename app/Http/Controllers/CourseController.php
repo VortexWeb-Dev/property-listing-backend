@@ -51,9 +51,8 @@ class CourseController extends Controller
     }
 
     
-    public function store(Request $request)
+        public function store(Request $request)
     {
-
         if (Gate::denies('course.create')) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
@@ -61,15 +60,25 @@ class CourseController extends Controller
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
+            'tag_ids' => 'nullable|array',
+            'tag_ids.*' => 'exists:tags,id',
         ]);
 
-        $course = Course::create($validated);
+        $course = Course::create([
+            'title' => $validated['title'],
+            'description' => $validated['description'] ?? null,
+        ]);
 
-        return response()->json($course, 201);
+        if (!empty($validated['tag_ids'])) {
+            $course->tags()->sync($validated['tag_ids']); // attach tags
+        }
+
+        return response()->json($course->load('tags'), 201);
     }
 
+
    
-    public function update(Request $request, $id)
+        public function update(Request $request, $id)
     {
         if (Gate::denies('course.edit')) {
             return response()->json(['message' => 'Unauthorized'], 403);
@@ -80,12 +89,22 @@ class CourseController extends Controller
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
+            'tag_ids' => 'nullable|array',
+            'tag_ids.*' => 'exists:tags,id',
         ]);
 
-        $course->update($validated);
+        $course->update([
+            'title' => $validated['title'],
+            'description' => $validated['description'] ?? null,
+        ]);
 
-        return response()->json($course);
+        if (isset($validated['tag_ids'])) {
+            $course->tags()->sync($validated['tag_ids']); // Update tag associations
+        }
+
+        return response()->json($course->load('tags'));
     }
+
 
    
     public function destroy($id)

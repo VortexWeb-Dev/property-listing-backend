@@ -33,7 +33,7 @@ return Application::configure(basePath: dirname(__DIR__))
         
         $exceptions->render(function (NotFoundHttpException $e) {
             return response()->json([
-                'message' => 'Offlisting not found.',
+                'message' => 'Data Not found.',
             ], 404);
         });
         
