@@ -30,6 +30,7 @@ class CompanyController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string',
+            'bitrix_api'=>'nullable|string',
             'email' => 'required|email|unique:companies,email',
             'phone' => 'nullable|string',
             'website' => 'nullable|url',
@@ -87,6 +88,7 @@ class CompanyController extends Controller
     {
         $validated = $request->validate([
             'name' => 'sometimes|string',
+            'bitrix_api'=>'nullable|string',
             'email' => 'sometimes|email|unique:companies,email,' . $company->id,
             'phone' => 'nullable|string',
             'website' => 'nullable|url',
