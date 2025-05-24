@@ -19,6 +19,7 @@ use App\Http\Controllers\RecycleBinController;
 use App\Http\Controllers\ListingActionController;
 use App\Http\Controllers\OffplanListingController;
 use App\Http\Controllers\ListingAnalyticsController;
+use App\Http\Controllers\LeadController;
 
 // Authentication
 Route::post('/register', [AuthController::class, 'register']);
@@ -91,5 +92,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/listing-analytics', [ListingAnalyticsController::class, 'index']);
 
     Route::apiResource('offplanListing', OffplanListingController::class);
+
+    // Leads
+    Route::apiResource('leads', LeadController::class);
     
 });

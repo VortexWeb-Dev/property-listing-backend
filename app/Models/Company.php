@@ -11,6 +11,7 @@ class Company extends Model
     protected $table="companies";
     protected $fillable = [
         'name',
+        'bitrix_api',
         'email',
         'phone',
         'website',
