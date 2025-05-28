@@ -60,6 +60,7 @@ class CourseController extends Controller
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
+            'offered_by' => 'required|string|max:255',
             'tag_ids' => 'nullable|array',
             'tag_ids.*' => 'exists:tags,id',
         ]);
@@ -67,6 +68,7 @@ class CourseController extends Controller
         $course = Course::create([
             'title' => $validated['title'],
             'description' => $validated['description'] ?? null,
+            'offered_by' => $validated['offered_by'],
         ]);
 
         if (!empty($validated['tag_ids'])) {
@@ -87,9 +89,9 @@ class CourseController extends Controller
         $course = Course::findOrFail($id);
 
         $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'tag_ids' => 'nullable|array',
+            'title' => 'sometimes|string|max:255',
+            'description' => 'sometimes|nullable|string',
+            'tag_ids' => 'sometimes|nullable|array',
             'tag_ids.*' => 'exists:tags,id',
         ]);
 

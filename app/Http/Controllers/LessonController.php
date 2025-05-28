@@ -57,34 +57,50 @@ class LessonController extends Controller
             'description' => 'nullable|string',
             'video_url' => 'nullable|url',
             'pdf_url' => 'nullable|url',
+            'duration' => 'required|numeric|min:0.1',
             'course_id' => 'required|exists:courses,id',
         ]);
 
         $lesson = Lesson::create($validated);
+
+        $course = $lesson->course;
+       $course->increment('number_of_lectures');
+       $course->increment('total_duration', $lesson->duration);
 
         return response()->json($lesson, 201);
     }
 
 
   
-    public function update(Request $request, $id)
+        public function update(Request $request, $id)
     {
         if (Gate::denies('lesson.edit')) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
         $lesson = Lesson::findOrFail($id);
+        $oldDuration = $lesson->duration ?? 0;
 
         $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'video_url' => 'nullable|url',
-            'pdf_url' => 'nullable|url',
+            'title' => 'sometimes|string|max:255',
+            'description' => 'sometimes|nullable|string',
+            'video_url' => 'sometimes|nullable|url',
+            'pdf_url' => 'sometimes|nullable|url',
+            'duration' => 'sometimes|numeric|min:0',
         ]);
 
         $lesson->update($validated);
+
+        // Update course total_duration
+        $newDuration = $validated['duration'];
+        $difference = $newDuration - $oldDuration;
+
+        $course = $lesson->course;
+        $course->increment('total_duration', $difference);
+
         return response()->json($lesson);
     }
+
 
     public function show($id)
     {
@@ -109,6 +125,11 @@ class LessonController extends Controller
         }
 
         $lesson = Lesson::findOrFail($id);
+        $course = $lesson->course;
+        
+        $course->decrement('number_of_lectures');
+        $course->decrement('total_duration', $lesson->duration);
+        
         $lesson->delete();
         return response()->json(['message' => 'Deleted']);
     }
