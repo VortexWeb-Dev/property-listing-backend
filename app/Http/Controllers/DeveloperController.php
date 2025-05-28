@@ -53,10 +53,10 @@ class DeveloperController extends Controller
         }
 
         $validatedData = $request->validate([
-            "name" => "string",
-            "email" => "email|unique:developers,email," . $developer_id,
-            "phone" => "string",
-            "website" => "nullable|url",
+            "name" => "sometimes|string",
+            "email" => "sometimes|email|unique:developers,email," . $developer_id,
+            "phone" => "sometimes|string",
+            "website" => "sometimes|nullable|url",
         ]);
 
         $developer->update($validatedData);
