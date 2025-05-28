@@ -21,4 +21,12 @@ class Course extends Model
     {
         return $this->belongsToMany(Tag::class, 'course_tags');
     }
+
+        public function enrolledUsers()
+    {
+        return $this->belongsToMany(User::class)
+                    ->withTimestamps()
+                    ->withPivot('enrolled_at');
+    }
+
 }
