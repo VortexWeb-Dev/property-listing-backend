@@ -2,6 +2,8 @@
 
 namespace App\Models;
 use App\Models\Company;
+use App\Models\Course;
+use App\Models\Lesson;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -61,6 +63,21 @@ class User extends Authenticatable
     {
         $permissions = config("permissions.{$this->role}", []);
         return in_array($permission, $permissions);
+    }
+
+
+        public function enrolledCourses()
+    {
+        return $this->belongsToMany(Course::class)
+                    ->withTimestamps()
+                    ->withPivot('enrolled_at');
+    }
+
+    public function completedLessons()
+    {
+        return $this->belongsToMany(Lesson::class)
+                    ->withTimestamps()
+                    ->withPivot('completed', 'completed_at');
     }
 
     

@@ -20,6 +20,8 @@ use App\Http\Controllers\ListingActionController;
 use App\Http\Controllers\OffplanListingController;
 use App\Http\Controllers\ListingAnalyticsController;
 use App\Http\Controllers\LeadController;
+use App\Http\Controllers\EnrollmentController;
+use App\Http\Controllers\LessonProgressController;
 
 // Authentication
 Route::post('/register', [AuthController::class, 'register']);
@@ -95,5 +97,15 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Leads
     Route::apiResource('leads', LeadController::class);
+
+    // User Course Mapping
+
+    // Course Enrollment
+    Route::post('/courses/{course}/enroll', [EnrollmentController::class, 'enroll']);
+    Route::get('/my-courses', [EnrollmentController::class, 'myCourses']);
+
+    // Lesson Completion
+    Route::post('/lessons/{lesson}/complete', [LessonProgressController::class, 'markComplete']);
+    Route::get('/my-completed-lessons', [LessonProgressController::class, 'myCompletedLessons']);
     
 });
