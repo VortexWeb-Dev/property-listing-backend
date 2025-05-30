@@ -29,4 +29,10 @@ class Course extends Model
                     ->withPivot('enrolled_at');
     }
 
+        public function company()
+    {
+        return $this->belongsTo(Company::class, 'offered_by');
+    }
+
+
 }
